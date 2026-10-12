@@ -49,6 +49,8 @@ func (e *Engine) createMediaTicket(id, mode string) (any, error) {
 		return nil, errors.New("预览类型无效")
 	}
 	ticket := mediaTicket{Expires: time.Now().Add(10 * time.Minute)}
+	quality, note := "播放版本", "下载仍按资源选择的画质执行。"
+	width, height := 0, 0
 	var resource Resource
 	e.mu.RLock()
 	if mode == "job" {
@@ -86,6 +88,15 @@ func (e *Engine) createMediaTicket(id, mode string) (any, error) {
 	if ticket.File != "" {
 		if info, err := os.Stat(ticket.File); err != nil || !info.Mode().IsRegular() {
 			return nil, errors.New("预览文件已被移动或删除")
+		}
+		local, err := e.prepareLocalPreview(ticket.File, ticket.Type)
+		if err != nil {
+			return nil, err
+		}
+		ticket.File, quality, note = local.File, local.Quality, local.Note
+		width, height = local.Width, local.Height
+		if local.Compatible {
+			ticket.Type = "video/mp4"
 		}
 	} else if mode == "poster" {
 		ticket.URL = resource.Thumbnail
@@ -173,13 +184,10 @@ func (e *Engine) createMediaTicket(id, mode string) (any, error) {
 		e.mu.Unlock()
 		return nil, errors.New("预览请求过多，请稍后重试")
 	}
+	ticket.Expires = time.Now().Add(10 * time.Minute)
 	e.mediaTickets[token] = ticket
 	e.mu.Unlock()
-	quality := "播放版本"
-	if ticket.File != "" {
-		quality = "已下载文件"
-	}
-	return map[string]any{"url": e.baseURL + "/media/" + token, "name": ticket.Name, "type": ticket.Type, "quality": quality}, nil
+	return map[string]any{"url": e.baseURL + "/media/" + token, "name": ticket.Name, "type": ticket.Type, "quality": quality, "note": note, "width": width, "height": height}, nil
 }
 
 func mediaFileType(file string) string {

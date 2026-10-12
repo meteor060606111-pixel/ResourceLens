@@ -17,9 +17,9 @@ import (
 
 func TestMediaLocalTicketAndGuards(t *testing.T) {
 	root := t.TempDir()
-	file := filepath.Join(root, "video.mp4")
-	data := append([]byte("0000ftypisom0000"), bytes.Repeat([]byte("a"), 500)...)
-	if err := os.WriteFile(file, data, 0600); err != nil {
+	file := filepath.Join(fixtureVideo(t, &Engine{root: root}, false), "clip.mp4")
+	data, err := os.ReadFile(file)
+	if err != nil {
 		t.Fatal(err)
 	}
 	e := &Engine{ctx: context.Background(), resources: map[string]*Resource{"r": {ID: "r", Name: "作品.mp4", Type: "video"}}, jobs: map[string]*Job{"j": {ID: "j", ResourceID: "r", Name: "作品.mp4", Status: "completed", File: file, CreatedAt: time.Now()}}}

@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const appVersion = "1.2.1"
+const appVersion = "1.3.0"
 
 type MediaFormat struct {
 	ID        string  `json:"id"`
@@ -444,6 +444,8 @@ func (e *Engine) clearJobHistory(ids []string) error {
 	return nil
 }
 func (e *Engine) cleanCache(remove bool) (map[string]any, error) {
+	e.previewMu.Lock()
+	defer e.previewMu.Unlock()
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	protected := map[string]bool{}
@@ -501,6 +503,25 @@ func (e *Engine) cleanCache(remove bool) (map[string]any, error) {
 		}
 		if remove {
 			os.Remove(root)
+		}
+	}
+	previewDir := filepath.Join(e.root, "data", "preview-cache")
+	for _, ticket := range e.mediaTickets {
+		if time.Now().Before(ticket.Expires) {
+			protected[ticket.File] = true
+		}
+	}
+	for _, file := range e.previewCacheEntries() {
+		target := filepath.Join(previewDir, file.Name())
+		if protected[target] || time.Since(file.ModTime()) < 15*time.Minute {
+			continue
+		}
+		bytes += file.Size()
+		count++
+		if remove {
+			if err := os.Remove(target); err != nil {
+				return nil, err
+			}
 		}
 	}
 	removedBytes := int64(0)

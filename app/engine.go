@@ -48,6 +48,7 @@ type Resource struct {
 	MIME                  string            `json:"mime"`
 	Size                  int64             `json:"size"`
 	Kind                  string            `json:"kind"`
+	Manual                bool              `json:"manual,omitempty"`
 	Site                  string            `json:"site,omitempty"`
 	Duration              float64           `json:"duration,omitempty"`
 	Thumbnail             string            `json:"thumbnail,omitempty"`
@@ -130,6 +131,7 @@ type Engine struct {
 	readProxy              func() (ProxySnapshot, error)
 	writeProxy             func(ProxySnapshot) error
 	mediaTickets           map[string]mediaTicket
+	previewMu              sync.Mutex
 	batches                map[string]*ParseBatch
 	update                 UpdateInfo
 	douyinSources          map[string]cachedDouyinSource
@@ -591,6 +593,9 @@ func (e *Engine) remember(raw string, h http.Header, mt string, size int64, disp
 	if err != nil {
 		return nil
 	}
+	if mediaFragment(raw, mt) || !manual && captureNoise(raw, mt, size) {
+		return nil
+	}
 	cfg := e.configSnapshot()
 	if !manual && cfg.HostFilter != "" && !strings.Contains(strings.ToLower(u.Hostname()), strings.ToLower(cfg.HostFilter)) {
 		return nil
@@ -620,6 +625,7 @@ func (e *Engine) remember(raw string, h http.Header, mt string, size int64, disp
 		}
 	}
 	resource := &Resource{ID: id, URL: raw, Name: name, Host: u.Host, Type: typ, MIME: mt, Size: size, Kind: "direct", CapturedAt: time.Now(), Headers: pub, privateHeaders: h.Clone(), GroupID: mediaGroup(raw, h.Get("Referer")), Site: platformName("", raw)}
+	resource.Manual = manual
 	if typ == "video" && wechatEncryptedURL(raw) {
 		resource.Site, resource.Kind, resource.CaptureRequired = "微信视频号", "wechat-media", true
 	}
@@ -637,6 +643,7 @@ func (e *Engine) remember(raw string, h http.Header, mt string, size int64, disp
 		}
 	}
 	if prev != nil {
+		prev.Manual = prev.Manual || manual
 		if size > 0 {
 			prev.Size = size
 		}
@@ -663,6 +670,9 @@ func (e *Engine) addURL(raw string) (*Resource, error) {
 	if isWeChatPage(u) {
 		return e.addWechatPage(raw)
 	}
+	if mediaFragment(raw, "") {
+		return nil, errors.New("这是播放器的分段地址，请添加完整视频页面或 M3U8 / MPD 播放清单")
+	}
 	if knownVideoPage(u) || resourceType("", raw) == "playlist" {
 		return e.resolveVideo(raw, nil)
 	}
@@ -684,6 +694,9 @@ func (e *Engine) addURL(raw string) (*Resource, error) {
 	}
 	if resp.StatusCode >= 400 && resp.StatusCode != 405 {
 		return nil, fmt.Errorf("链接返回 HTTP %d", resp.StatusCode)
+	}
+	if mediaFragment(raw, resp.Header.Get("Content-Type")) {
+		return nil, errors.New("这是播放器的分段地址，请添加完整视频页面或 M3U8 / MPD 播放清单")
 	}
 	r := e.remember(raw, req.Header, resp.Header.Get("Content-Type"), resp.ContentLength, resp.Header.Get("Content-Disposition"), true)
 	if r == nil {

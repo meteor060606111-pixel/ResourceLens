@@ -64,6 +64,9 @@ func (e *Engine) loadSession() {
 		if err != nil || u.Host == "" || u.User != nil || (u.Scheme != "http" && u.Scheme != "https") || !validResourceID(r.ID) {
 			continue
 		}
+		if r.Kind == "direct" && !r.Manual && captureNoise(r.URL, r.MIME, r.Size) {
+			continue
+		}
 		r.privateHeaders = http.Header{}
 		for _, key := range []string{"User-Agent", "Referer", "Origin", "Accept", "Range"} {
 			if value := r.Headers[key]; value != "" {

@@ -90,7 +90,7 @@ func main() {
 		return
 	}
 	app := &App{engine: engine}
-	err = wails.Run(&options.App{Title: "拾流 · ResourceLens", Width: 1440, Height: 940, MinWidth: 980, MinHeight: 650, BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 255}, AssetServer: &assetserver.Options{Assets: assets}, Bind: []interface{}{app}, OnStartup: func(ctx context.Context) {
+	err = wails.Run(&options.App{Title: "拾流 · ResourceLens", Width: 1200, Height: 800, MinWidth: 980, MinHeight: 650, BackgroundColour: &options.RGBA{R: 232, G: 248, B: 250, A: 255}, AssetServer: &assetserver.Options{Assets: assets}, Bind: []interface{}{app}, OnStartup: func(ctx context.Context) {
 		app.ctx = ctx
 		quitMu.Lock()
 		requestApplicationQuit = func() { engine.Close(); wruntime.Quit(ctx) }
