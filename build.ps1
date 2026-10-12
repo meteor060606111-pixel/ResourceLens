@@ -27,7 +27,7 @@ if (-not (Test-Path -LiteralPath $npmExecutable)) { $npmExecutable = (Get-Comman
 if ($LASTEXITCODE -ne 0) { throw 'Frontend dependency installation failed' }
 & $npmExecutable run build --prefix frontend
 if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed' }
-& $GoExecutable test -tags 'desktop,production' .
+& $GoExecutable test -tags 'desktop,production' ./app ./frontend
 if ($LASTEXITCODE -ne 0) { throw 'Backend checks failed' }
 $resourceCompiler = Join-Path $PSScriptRoot 'tools\bin\go-winres.exe'
 if (-not (Test-Path -LiteralPath $resourceCompiler)) {
@@ -37,8 +37,8 @@ if (-not (Test-Path -LiteralPath $resourceCompiler)) {
         if ($LASTEXITCODE -ne 0) { throw 'Windows resource compiler installation failed' }
     }
 }
-& $resourceCompiler make --arch amd64
+& $resourceCompiler make --arch amd64 --out app/rsrc
 if ($LASTEXITCODE -ne 0) { throw 'Windows resources build failed' }
-& $GoExecutable build -tags 'desktop,production' -ldflags '-s -w -H windowsgui' -o $OutputFile .
+& $GoExecutable build -tags 'desktop,production' -ldflags '-s -w -H windowsgui' -o $OutputFile ./app
 if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
 Write-Host "Built: $OutputFile"

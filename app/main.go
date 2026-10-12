@@ -2,15 +2,15 @@ package main
 
 import (
 	"context"
-	"embed"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	"resourcelens/frontend"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -18,8 +18,7 @@ import (
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-//go:embed all:frontend/dist
-var assets embed.FS
+var assets = frontend.Assets()
 
 type App struct {
 	engine *Engine
@@ -73,8 +72,7 @@ func main() {
 		defer logFile.Close()
 		log.SetOutput(logFile)
 	}
-	ui, _ := fs.Sub(assets, "frontend/dist")
-	engine, err := NewEngine(*root, ui, *apiPort)
+	engine, err := NewEngine(*root, assets, *apiPort)
 	if err != nil {
 		log.Print(err)
 		if !*headless {

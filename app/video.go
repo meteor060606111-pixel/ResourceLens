@@ -49,7 +49,7 @@ func knownVideoPage(u *url.URL) bool {
 func (e *Engine) videoTools() (string, error) {
 	exe, _ := os.Executable()
 	cwd, _ := os.Getwd()
-	for _, root := range []string{filepath.Dir(exe), e.root, cwd} {
+	for _, root := range []string{filepath.Dir(exe), e.root, cwd, filepath.Dir(cwd)} {
 		dir := filepath.Join(root, "video-engine")
 		found := true
 		for _, name := range []string{"yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"} {

@@ -1,5 +1,19 @@
 # 拾流 ResourceLens 1.2.0
 
+## 目录导航
+
+| 目录 / 文件 | 用途 |
+| --- | --- |
+| [app](app) | Go 后端、Windows 入口、下载与捕获逻辑、相应测试；内部 helpers 为嵌入脚本 |
+| [frontend](frontend) | Vue 界面、样式和编译后的界面资源入口 |
+| [installer](installer) | Windows 安装程序源码与构建脚本 |
+| [docs](docs) | [版本记录](docs/CHANGELOG.md)与[开发说明](docs/DEVELOPMENT.md) |
+| [video-engine](video-engine) | 独立媒体引擎的来源和许可证；二进制仅保存在本机 |
+| [winres](winres) | Windows 图标、应用版本和清单 |
+| [build.ps1](build.ps1) | 构建前端、检查后端并生成 Windows 应用 |
+
+本机生成的 data、downloads、tools 和界面 dist 均不进入仓库。
+
 ## 1.2.0 日常使用与维护升级
 
 - 下载任务支持暂停、继续、关闭后恢复，以及速度、剩余时间和重连原因。直接文件使用可校验的分段缓存；来源不支持 Range 时会提示重新传输。续传前确认媒体标识，画质变化不会接到旧文件上。
