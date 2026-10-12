@@ -132,6 +132,7 @@ type Engine struct {
 	mediaTickets           map[string]mediaTicket
 	batches                map[string]*ParseBatch
 	update                 UpdateInfo
+	douyinSources          map[string]cachedDouyinSource
 }
 
 func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {

@@ -12,7 +12,7 @@
       "0409": {
         "identity": {
           "name": "ResourceLens.Desktop",
-          "version": "1.2.0.0"
+          "version": "1.2.1.0"
         },
         "description": "ResourceLens desktop capture and download manager",
         "minimum-os": "win10",
@@ -36,22 +36,22 @@
     "#1": {
       "0000": {
         "fixed": {
-          "file_version": "1.2.0.0",
-          "product_version": "1.2.0.0"
+          "file_version": "1.2.1.0",
+          "product_version": "1.2.1.0"
         },
         "info": {
           "0409": {
             "Comments": "",
             "CompanyName": "ResourceLens",
             "FileDescription": "拾流 ResourceLens",
-            "FileVersion": "1.2.0",
+            "FileVersion": "1.2.1",
             "InternalName": "ResourceLens",
             "LegalCopyright": "2026 ResourceLens contributors",
             "LegalTrademarks": "",
             "OriginalFilename": "ResourceLens.exe",
             "PrivateBuild": "",
             "ProductName": "拾流 ResourceLens",
-            "ProductVersion": "1.2.0",
+            "ProductVersion": "1.2.1",
             "SpecialBuild": ""
           }
         }

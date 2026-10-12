@@ -120,6 +120,89 @@ type douyinPublicVideo struct {
 	Thumbnail, Author string
 }
 
+type cachedDouyinSource struct {
+	Video      *douyinPublicVideo
+	VerifiedAt time.Time
+}
+
+const douyinSourceLifetime = 5 * time.Minute
+const douyinMissingAudio = "DASH 未提供可合并的音轨地址"
+
+func cloneDouyinVideo(source *douyinPublicVideo) *douyinPublicVideo {
+	copyVideo := *source
+	cloneFormats := func(formats []map[string]any) []map[string]any {
+		out := make([]map[string]any, 0, len(formats))
+		for _, format := range formats {
+			copyFormat := make(map[string]any, len(format))
+			for key, value := range format {
+				copyFormat[key] = value
+			}
+			out = append(out, copyFormat)
+		}
+		return out
+	}
+	copyVideo.Formats = cloneFormats(source.Formats)
+	copyVideo.Ladder = cloneFormats(source.Ladder)
+	return &copyVideo
+}
+
+func (e *Engine) cacheDouyinSource(video *douyinPublicVideo) {
+	if video == nil || video.ID == "" || len(video.Formats) == 0 {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.douyinSources == nil {
+		e.douyinSources = map[string]cachedDouyinSource{}
+	}
+	if len(e.douyinSources) >= 128 {
+		for id, entry := range e.douyinSources {
+			if time.Since(entry.VerifiedAt) >= douyinSourceLifetime {
+				delete(e.douyinSources, id)
+			}
+		}
+		if len(e.douyinSources) >= 128 {
+			oldestID, oldestTime := "", time.Now()
+			for id, entry := range e.douyinSources {
+				if entry.VerifiedAt.Before(oldestTime) {
+					oldestID, oldestTime = id, entry.VerifiedAt
+				}
+			}
+			delete(e.douyinSources, oldestID)
+		}
+	}
+	// Signed media addresses stay in memory, separate from persisted resources.
+	e.douyinSources[video.ID] = cachedDouyinSource{Video: cloneDouyinVideo(video), VerifiedAt: time.Now()}
+}
+
+func (e *Engine) cachedPlayableDouyin(ctx context.Context, raw string) *douyinPublicVideo {
+	if ctx.Err() != nil {
+		return nil
+	}
+	u, _ := url.Parse(raw)
+	if !isDouyinPage(u) {
+		return nil
+	}
+	e.mu.RLock()
+	entry, ok := e.douyinSources[douyinID(u)]
+	if !ok || entry.Video == nil || time.Since(entry.VerifiedAt) < 0 || time.Since(entry.VerifiedAt) >= douyinSourceLifetime {
+		e.mu.RUnlock()
+		return nil
+	}
+	video := cloneDouyinVideo(entry.Video)
+	e.mu.RUnlock()
+	ladder := video.Ladder
+	// One scoped prefix request checks expiry and content before reusing a source.
+	// A failed check falls through to the normal fresh-page/browser extraction.
+	if err := e.verifyDouyinMedia(ctx, video); err != nil {
+		return nil
+	}
+	video.Ladder = ladder
+	video.Quality = douyinQualityLabel(video.Formats[0], ladder)
+	video.Formats[0]["format_note"] = video.Quality
+	return video
+}
+
 func (v *douyinPublicVideo) extractorInfo() map[string]any {
 	return map[string]any{"id": v.ID, "title": v.Title, "duration": v.Duration, "webpage_url": v.Source, "extractor": "DouyinPublic", "extractor_key": "Douyin", "formats": v.Formats}
 }
@@ -297,7 +380,7 @@ func publicDouyinItem(item map[string]any, id, source string) *douyinPublicVideo
 		} else if strings.EqualFold(douyinText(metadata["format"]), "dash") {
 			// These URLs are a single video track. A file_id in video_extra is
 			// not an audio URL; do not claim AAC or produce a silently muted file.
-			unavailable = "DASH 未提供可合并的音轨地址"
+			unavailable = douyinMissingAudio
 		}
 		for _, candidate := range urls {
 			media := html.UnescapeString(douyinText(candidate))
@@ -334,6 +417,11 @@ func publicDouyinItem(item map[string]any, id, source string) *douyinPublicVideo
 			if unavailable != "" {
 				format["_douyin_unavailable"] = unavailable
 				format["acodec"] = "none"
+			} else if strings.EqualFold(douyinText(metadata["format"]), "mp4") && douyinText(format["_douyin_unavailable"]) == douyinMissingAudio {
+				// Root format can be DASH while this exact URL is explicitly a
+				// muxed MP4 in the rendition ladder. Prefer rendition metadata.
+				delete(format, "_douyin_unavailable")
+				format["acodec"] = "aac"
 			}
 			if !duplicate {
 				v.Formats = append(v.Formats, format)
@@ -511,7 +599,10 @@ func (e *Engine) resolveDouyinVideo(raw string, headers http.Header) (*Resource,
 			e.mu.Unlock()
 			return r, nil
 		}
-		return nil, douyinVideoError(ctx, fallbackErr)
+		if normalized := douyinVideoError(ctx, fallbackErr); normalized.Error() != douyinAccessMessage {
+			return nil, normalized
+		}
+		return nil, douyinVideoError(ctx, err)
 	}
 	requestHeaders := http.Header{"User-Agent": []string{v.UserAgent}, "Referer": []string{v.Source}}
 	r := e.remember(canonical, requestHeaders, "video/mp4", v.Size, "", true)
@@ -850,11 +941,13 @@ func (e *Engine) verifyDouyinMedia(ctx context.Context, v *douyinPublicVideo) er
 	// H.264 playback URL. The caller's 90-second budget also bounds mirror probes.
 	formats := orderedDouyinFormats(v.Formats)
 	v.Ladder = append([]map[string]any(nil), formats...)
+	reason := "未取得有效 MP4"
 	for _, format := range formats {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if douyinText(format["_douyin_unavailable"]) != "" {
+		if unavailable := douyinText(format["_douyin_unavailable"]); unavailable != "" {
+			reason = unavailable
 			continue
 		}
 		raw, _ := format["url"].(string)
@@ -868,8 +961,10 @@ func (e *Engine) verifyDouyinMedia(ctx context.Context, v *douyinPublicVideo) er
 		req.Header.Set("Referer", v.Source)
 		req.Header.Set("Accept-Encoding", "identity")
 		req.Header.Set("Range", "bytes=0-4095")
+		req.Close = true
 		resp, err := (&http.Client{Transport: e.transport}).Do(req)
 		if err != nil {
+			reason = "媒体服务器连接失败"
 			cancel()
 			if ctx.Err() != nil {
 				return ctx.Err()
@@ -883,6 +978,13 @@ func (e *Engine) verifyDouyinMedia(ctx context.Context, v *douyinPublicVideo) er
 			return ctx.Err()
 		}
 		if (resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent) || readErr != nil || htmlMIME(resp.Header.Get("Content-Type")) || len(prefix) < 12 || string(prefix[4:8]) != "ftyp" {
+			if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+				reason = fmt.Sprintf("媒体服务器返回 HTTP %d", resp.StatusCode)
+			} else if readErr != nil {
+				reason = "媒体响应中断"
+			} else {
+				reason = "媒体地址未返回 MP4 数据"
+			}
 			continue
 		}
 		size := int64(-1)
@@ -912,13 +1014,21 @@ func (e *Engine) verifyDouyinMedia(ctx context.Context, v *douyinPublicVideo) er
 		v.Formats = []map[string]any{format}
 		return nil
 	}
-	return errors.New("抖音返回的媒体地址暂时不可访问或不是有效 MP4，未创建网页下载任务")
+	return fmt.Errorf("抖音视频流检查失败：%s，请重试或播放后捕获", reason)
 }
 
 func (e *Engine) extractPlayableDouyin(ctx context.Context, raw string) (*douyinPublicVideo, string, error) {
+	if ctx.Err() != nil {
+		return nil, raw, ctx.Err()
+	}
+	if video := e.cachedPlayableDouyin(ctx, raw); video != nil {
+		u, _ := url.Parse(raw)
+		return video, canonicalDouyinURL(video.ID, u), nil
+	}
 	v, canonical, err := e.extractPublicDouyin(ctx, raw)
 	if err == nil {
 		if err = e.verifyDouyinMedia(ctx, v); err == nil {
+			e.cacheDouyinSource(v)
 			return v, canonical, nil
 		}
 	}
@@ -935,12 +1045,16 @@ func (e *Engine) extractPlayableDouyin(ctx context.Context, raw string) (*douyin
 	if err = e.verifyDouyinMedia(ctx, v); err != nil {
 		return nil, source, err
 	}
+	e.cacheDouyinSource(v)
 	return v, source, nil
 }
 
 func douyinVideoError(ctx context.Context, err error) error {
 	if ctx.Err() != nil {
 		return videoError(ctx, "", err)
+	}
+	if strings.HasPrefix(err.Error(), "抖音视频流检查失败：") {
+		return err
 	}
 	lower := strings.ToLower(err.Error())
 	if strings.Contains(lower, "平台要求登录") || strings.Contains(lower, "cookie") || strings.Contains(lower, "403") || strings.Contains(lower, "unsupported") || strings.Contains(lower, "不支持此播放页") || strings.Contains(lower, "解析结果无效") || strings.Contains(lower, "没有可下载") {

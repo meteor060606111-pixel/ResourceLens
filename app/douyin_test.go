@@ -9,7 +9,108 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestDouyinRootDASHDoesNotPoisonExplicitMP4Renditions(t *testing.T) {
+	prefix := bytes.Repeat([]byte{0x36}, 4096)
+	copy(prefix[:12], []byte{0, 0, 0, 32, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/1440-muxed" {
+			t.Errorf("valid highest MP4 was discarded: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "video/mp4")
+		w.Header().Set("Content-Range", "bytes 0-4095/178902146")
+		w.WriteHeader(http.StatusPartialContent)
+		w.Write(prefix)
+	}))
+	defer server.Close()
+	address := func(raw string, width, height int) map[string]any {
+		return map[string]any{"url_list": []any{server.URL + raw}, "width": width, "height": height}
+	}
+	item := map[string]any{
+		"aweme_id": "7695073720112712996",
+		"video": map[string]any{
+			"format": "dash", "width": 2560, "height": 1440,
+			"play_addr_h264": address("/1080-muxed", 1920, 1080),
+			"play_addr_265":  address("/1440-muxed", 2560, 1440),
+			"bit_rate": []any{
+				map[string]any{"format": "mp4", "is_h265": 1, "FPS": 60, "bit_rate": 2370663, "play_addr": address("/1440-muxed", 2560, 1440)},
+				map[string]any{"format": "mp4", "FPS": 60, "bit_rate": 2339122, "play_addr": address("/1080-muxed", 1920, 1080)},
+			},
+		},
+	}
+	v := publicDouyinItem(item, "7695073720112712996", "https://www.douyin.com/video/7695073720112712996")
+	e := &Engine{transport: &http.Transport{Proxy: nil}}
+	defer e.transport.CloseIdleConnections()
+	if err := e.verifyDouyinMedia(context.Background(), v); err != nil {
+		t.Fatal(err)
+	}
+	if v.Formats[0]["url"] != server.URL+"/1440-muxed" || v.Formats[0]["acodec"] != "aac" || v.Size != 178902146 {
+		t.Fatal("explicit muxed rendition did not preserve its quality, audio or actual size")
+	}
+}
+
+func TestDouyinVerifiedSourceReusedWithoutRefreshingAnonymousPage(t *testing.T) {
+	prefix := bytes.Repeat([]byte{0x36}, 4096)
+	copy(prefix[:12], []byte{0, 0, 0, 32, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'})
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if r.Header.Get("Cookie") != "" || r.Header.Get("Range") != "bytes=0-4095" {
+			t.Error("source reuse sent credentials or exceeded the prefix probe")
+		}
+		w.Header().Set("Content-Type", "video/mp4")
+		w.Header().Set("Content-Range", "bytes 0-4095/12000")
+		w.WriteHeader(http.StatusPartialContent)
+		w.Write(prefix)
+	}))
+	defer server.Close()
+	e := &Engine{transport: &http.Transport{Proxy: nil}}
+	defer e.transport.CloseIdleConnections()
+	v := &douyinPublicVideo{ID: "7695073720112712996", Title: "fixture", Source: "https://www.douyin.com/video/7695073720112712996", UserAgent: douyinUserAgent,
+		Formats: []map[string]any{{"url": server.URL, "vcodec": "h264", "acodec": "aac", "width": 2560, "height": 1440}}}
+	if err := e.verifyDouyinMedia(context.Background(), v); err != nil {
+		t.Fatal(err)
+	}
+	e.cacheDouyinSource(v)
+	v.Formats[0]["url"] = "https://invalid.example/changed-by-caller"
+	reused, _, err := e.extractPlayableDouyin(context.Background(), "https://www.douyin.com/jingxuan?modal_id="+v.ID)
+	if err != nil || reused.Size != 12000 || requests != 2 || len(reused.Ladder) != 1 {
+		t.Fatalf("already verified media unnecessarily refreshed its page: requests=%d, err=%v", requests, err)
+	}
+	reused.Formats[0]["width"] = 1
+	if e.douyinSources[v.ID].Video.Formats[0]["width"] != 2560 {
+		t.Fatal("download selection mutated the reusable source")
+	}
+	entry := e.douyinSources[v.ID]
+	entry.VerifiedAt = time.Now().Add(-douyinSourceLifetime - time.Second)
+	e.douyinSources[v.ID] = entry
+	if e.cachedPlayableDouyin(context.Background(), v.Source) != nil || requests != 2 {
+		t.Fatal("expired source was reused or probed")
+	}
+}
+
+func TestDouyinSourceCacheRejectsExpiredMediaAndCancellation(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer server.Close()
+	e := &Engine{transport: &http.Transport{Proxy: nil}}
+	defer e.transport.CloseIdleConnections()
+	v := &douyinPublicVideo{ID: "7695073720112712996", Source: "https://www.douyin.com/video/7695073720112712996", Formats: []map[string]any{{"url": server.URL}}}
+	e.cacheDouyinSource(v)
+	if e.cachedPlayableDouyin(context.Background(), v.Source) != nil || requests != 1 {
+		t.Fatal("inaccessible source remained available")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if e.cachedPlayableDouyin(ctx, v.Source) != nil || requests != 1 {
+		t.Fatal("cancelled task made another source request")
+	}
+}
 
 func TestDouyinPerRenditionMetadataAndQualityOrder(t *testing.T) {
 	addr := func(raw string, width, height int) map[string]any {
