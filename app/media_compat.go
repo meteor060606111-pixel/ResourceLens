@@ -39,7 +39,7 @@ func probePreview(ctx context.Context, tools, file string) (previewProbe, error)
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	out := &limitedBuffer{limit: 64 << 10}
-	cmd := exec.Command(filepath.Join(tools, "ffprobe.exe"), "-v", "error", "-show_entries", "stream=codec_type,codec_name,pix_fmt,width,height:format=format_name", "-of", "json", file)
+	cmd := exec.Command(toolPath(tools, "ffprobe"), "-v", "error", "-show_entries", "stream=codec_type,codec_name,pix_fmt,width,height:format=format_name", "-of", "json", file)
 	cmd.Stdout, cmd.Stderr = out, &tailBuffer{limit: 2048}
 	var result previewProbe
 	if runManagedCommand(ctx, cmd) != nil || json.Unmarshal(out.Bytes(), &result) != nil {
@@ -98,7 +98,7 @@ func (e *Engine) prepareLocalPreview(file, mediaType string) (localPreview, erro
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return result, errors.New("无法创建预览缓存目录")
 	}
-	if resolved, err := filepath.EvalSymlinks(dir); err != nil || !strings.EqualFold(filepath.Clean(resolved), filepath.Clean(dir)) {
+	if !ownedDirectory(e.root, dir) {
 		return result, errors.New("预览缓存目录无效")
 	}
 	target := filepath.Join(dir, hex.EncodeToString(key[:])+".mp4")
@@ -126,7 +126,7 @@ func (e *Engine) prepareLocalPreview(file, mediaType string) (localPreview, erro
 	tmp.Close()
 	defer os.Remove(part)
 	args := []string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", file, "-map", "0:v:0", "-map", "0:a:0?", "-sn", "-dn", "-map_metadata", "-1", "-vf", "scale=w='min(1280,iw)':h='min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2:reset_sar=1", "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-pix_fmt", "yuv420p", "-threads", "4", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-f", "mp4", part}
-	cmd := exec.Command(filepath.Join(tools, "ffmpeg.exe"), args...)
+	cmd := exec.Command(toolPath(tools, "ffmpeg"), args...)
 	cmd.Stderr = &tailBuffer{limit: 4096}
 	if err := runManagedCommand(ctx, cmd); err != nil {
 		if ctx.Err() != nil {
@@ -161,8 +161,7 @@ var previewCacheName = regexp.MustCompile(`^[a-f0-9]{64}\.mp4$`)
 // directory qualify; symlinks and other files are never removed.
 func (e *Engine) previewCacheEntries() []os.FileInfo {
 	dir := filepath.Join(e.root, "data", "preview-cache")
-	resolved, err := filepath.EvalSymlinks(dir)
-	if err != nil || !strings.EqualFold(filepath.Clean(resolved), filepath.Clean(dir)) {
+	if !ownedDirectory(e.root, dir) {
 		return nil
 	}
 	entries, _ := os.ReadDir(dir)

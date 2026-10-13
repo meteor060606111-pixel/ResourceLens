@@ -93,7 +93,8 @@ func (e *Engine) loadSession() {
 			break
 		}
 	}
-	for _, savedJob := range saved.Jobs {
+	for index := range saved.Jobs {
+		savedJob := &saved.Jobs[index]
 		j := &savedJob.Job
 		if j.ID == "" || !validResourceID(j.ResourceID) {
 			continue

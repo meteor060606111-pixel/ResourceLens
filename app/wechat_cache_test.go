@@ -116,7 +116,7 @@ func TestWechatDetailHookPreservesNestedReturn(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, filepath.Join(tools, "node.exe"), file)
+	command := exec.CommandContext(ctx, toolPath(tools, "node"), file)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("modified detail callback: %v %s", err, output)
 	}

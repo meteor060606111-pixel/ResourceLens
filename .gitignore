@@ -18,3 +18,11 @@
 *.crt
 *.cer
 /.finesse/
+/video-engine/ffmpeg
+/video-engine/ffprobe
+/video-engine/yt-dlp
+/video-engine/node
+/video-engine/toolchain.json
+*.app/
+*.dmg
+__pycache__/

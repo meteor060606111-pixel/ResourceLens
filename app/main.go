@@ -31,7 +31,8 @@ func (a *App) ChooseDirectory() (string, error) {
 }
 func (a *App) CopyText(s string) error { return wruntime.ClipboardSetText(a.ctx, s) }
 func (a *App) ChooseUpdateFile() (string, error) {
-	return wruntime.OpenFileDialog(a.ctx, wruntime.OpenDialogOptions{Title: "选择拾流新版安装程序", Filters: []wruntime.FileFilter{{DisplayName: "拾流安装程序 (*.exe)", Pattern: "*.exe"}}})
+	ext := updatePackageExtension()
+	return wruntime.OpenFileDialog(a.ctx, wruntime.OpenDialogOptions{Title: "选择拾流新版安装包", Filters: []wruntime.FileFilter{{DisplayName: "拾流安装包 (*" + ext + ")", Pattern: "*" + ext}}})
 }
 
 func main() {
@@ -61,8 +62,12 @@ func main() {
 		defer instance.Close()
 	}
 	if *root == "" {
-		exe, _ := os.Executable()
-		*root = filepath.Dir(exe)
+		var err error
+		*root, err = defaultApplicationRoot()
+		if err != nil {
+			startupError(err)
+			return
+		}
 	}
 	if err := os.MkdirAll(filepath.Join(*root, "data"), 0700); err != nil {
 		log.Fatal(err)

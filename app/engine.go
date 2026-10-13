@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -142,8 +143,16 @@ func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	os.MkdirAll(filepath.Join(root, "data"), 0700)
-	cfg := Config{DownloadDir: filepath.Join(root, "downloads"), ProxyPort: 18999, Segments: 8, Concurrent: 3, HTTPS: true, ClassifyBy: "none", NameTemplate: "{title}", DuplicatePolicy: "ask"}
+	if err = os.MkdirAll(filepath.Join(root, "data"), 0700); err != nil {
+		return nil, err
+	}
+	// macOS aliases /var and /tmp to /private. Normalize user-selected base
+	// directories once so owned-cache checks and yt-dlp's real paths agree.
+	root, err = filepath.EvalSymlinks(root)
+	if err != nil {
+		return nil, err
+	}
+	cfg := Config{DownloadDir: defaultDownloadDirectory(root), ProxyPort: 18999, Segments: 8, Concurrent: 3, HTTPS: true, ClassifyBy: "none", NameTemplate: "{title}", DuplicatePolicy: "ask"}
 	if data, err := os.ReadFile(filepath.Join(root, "data", "config.json")); err == nil {
 		if err = json.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("读取配置失败：%w", err)
@@ -153,6 +162,10 @@ func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
 		return nil, err
 	}
 	if err = os.MkdirAll(cfg.DownloadDir, 0755); err != nil {
+		return nil, err
+	}
+	cfg.DownloadDir, err = filepath.EvalSymlinks(cfg.DownloadDir)
+	if err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -305,10 +318,10 @@ func (e *Engine) state() map[string]any {
 		copy.Items = append([]ParseItem(nil), b.Items...)
 		bs = append(bs, copy)
 	}
-	return map[string]any{"resources": rs, "jobs": js, "batches": bs, "update": e.update, "config": e.config, "capture": e.capture, "certificateInstalled": e.certInstalled.Load(), "certificatePath": e.ca.certPath, "proxyAddress": fmt.Sprintf("127.0.0.1:%d", e.config.ProxyPort), "version": appVersion}
+	return map[string]any{"resources": rs, "jobs": js, "batches": bs, "update": e.update, "config": e.config, "capture": e.capture, "certificateInstalled": e.certInstalled.Load(), "certificatePath": e.ca.certPath, "proxyAddress": fmt.Sprintf("127.0.0.1:%d", e.config.ProxyPort), "version": appVersion, "platform": runtime.GOOS, "arch": runtime.GOARCH}
 }
 func (e *Engine) allowedOrigin(origin string) bool {
-	return origin == "" || origin == e.baseURL || origin == "http://wails.localhost" || origin == "https://wails.localhost"
+	return origin == "" || origin == e.baseURL || origin == "http://wails.localhost" || origin == "https://wails.localhost" || runtime.GOOS == "darwin" && origin == "wails://wails"
 }
 func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
@@ -469,6 +482,9 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 			}
 			if err == nil {
 				err = os.MkdirAll(in.Config.DownloadDir, 0755)
+			}
+			if err == nil {
+				in.Config.DownloadDir, err = filepath.EvalSymlinks(in.Config.DownloadDir)
 			}
 			if err == nil {
 				data, _ := json.MarshalIndent(in.Config, "", "  ")

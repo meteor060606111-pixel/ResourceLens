@@ -32,3 +32,7 @@ go test -tags 'desktop,production' ./app ./frontend
 ```
 
 构建后的 ResourceLens.exe 位于项目根目录，继续从旁边的 data、downloads 和 video-engine 读取本机运行文件。目录整理不移动下载视频或本机配置。安装程序在后续单独构建。
+
+## macOS 平台
+
+平台隔离文件包括 system_darwin.go、instance_darwin.go、wechat_status_darwin.go、browser_darwin.go 和 update_darwin.go。共享代理快照和恢复在 system_proxy.go，跨平台工具与数据目录在 platform.go；Windows 对应文件保持独立。macOS 通过 build-macos.sh 生成应用、内置媒体工具和 DMG，详细步骤见 [macOS 开发说明](../installer/macos/README.md)。

@@ -276,7 +276,7 @@ func (e *Engine) downloadVideo(ctx context.Context, j *Job, r *Resource, cfg Con
 		attemptCtx, cancelAttempt := context.WithCancel(ctx)
 		stop, reason, exited := make(chan struct{}), make(chan string, 1), make(chan struct{})
 		go e.watchVideoConnection(attemptCtx, cancelAttempt, j, attempt, stop, reason, exited)
-		cmd := exec.Command(filepath.Join(dir, "yt-dlp.exe"), args...)
+		cmd := exec.Command(toolPath(dir, "yt-dlp"), args...)
 		cmd.Dir = staging
 		cmd.Stdout, cmd.Stderr = lines, errLines
 		err = runManagedCommand(attemptCtx, cmd)

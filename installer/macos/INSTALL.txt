@@ -1,0 +1,12 @@
+拾流 ResourceLens · macOS
+
+1. 将 ResourceLens.app 拖入 Applications（应用程序）。
+2. 在应用程序中打开拾流。默认下载目录为 ~/Downloads/ResourceLens。
+3. 配置和任务保存在 ~/Library/Application Support/ResourceLens；更新应用会保留这些文件。
+
+首次开始 HTTPS 捕获会请求钥匙串信任和网络设置授权。停止捕获或正常退出时恢复原系统代理。微信视频号依赖客户端实际向代理提供的播放数据；请保持捕获开启，再正常进入微信播放。
+
+当前构建使用本地签名，未使用 Apple Developer ID 公证。如果 macOS 提示无法验证开发者，请先尝试右键应用选择“打开”；新版 macOS 可在“系统设置 → 隐私与安全性”中选择“仍要打开”。无需关闭系统整体安全保护。
+
+需要 macOS 13.5 或更高版本。arm64 安装包适用于 Apple 芯片，amd64 适用于 Intel。
+更新时先退出拾流，再拖入新版应用替换；卸载仅需移除应用，本机配置和已下载文件会保留。

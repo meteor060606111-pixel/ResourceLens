@@ -1,0 +1,58 @@
+{
+  "nodeVersion": "24.19.0",
+  "ytDlpVersion": "2026.08.19",
+  "architectures": {
+    "arm64": {
+      "ffmpeg": {
+        "url": "https://www.osxexperts.net/ffmpeg9arm.zip",
+        "sha256": "d0c06c5c68ce48af3143b262f7a9118a7c9f67de1e237fcc24ffb14df9c67af9",
+        "kind": "zip",
+        "member": "ffmpeg"
+      },
+      "ffprobe": {
+        "url": "https://www.osxexperts.net/ffprobe9arm.zip",
+        "sha256": "0c94fbdd8917022f28115eca512196cf4648732bc9e5db9ec8896c7e519d02aa",
+        "kind": "zip",
+        "member": "ffprobe"
+      },
+      "node": {
+        "url": "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz",
+        "sha256": "8294b7aa9b03997481c06babf1e8b270c859358f27da57a11509afe537ac381d",
+        "kind": "tar.gz",
+        "member": "node-v24.19.0-darwin-arm64/bin/node",
+        "licenseMember": "node-v24.19.0-darwin-arm64/LICENSE"
+      },
+      "yt-dlp": {
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp_macos",
+        "sha256": "0f192b7ec147ab6288885d6351d9ab67367640029b4377576ef46dd79cf7b202",
+        "kind": "binary"
+      }
+    },
+    "amd64": {
+      "ffmpeg": {
+        "url": "https://www.osxexperts.net/ffmpeg80intel.zip",
+        "sha256": "2d24d22db78c87f394a5822867acd5c5dc5e762cd261a44bd26923f3a5af3e07",
+        "kind": "zip",
+        "member": "ffmpeg"
+      },
+      "ffprobe": {
+        "url": "https://www.osxexperts.net/ffprobe80intel.zip",
+        "sha256": "0b6576104a95c1b39d4939e2df86f8f7cf1d55287ff57da48777d94605d12feb",
+        "kind": "zip",
+        "member": "ffprobe"
+      },
+      "node": {
+        "url": "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-x64.tar.gz",
+        "sha256": "d1b5e999db158c62fe8f7267a4476b035d8bd93b1a605bac24a3f0dd166e3316",
+        "kind": "tar.gz",
+        "member": "node-v24.19.0-darwin-x64/bin/node",
+        "licenseMember": "node-v24.19.0-darwin-x64/LICENSE"
+      },
+      "yt-dlp": {
+        "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp_macos",
+        "sha256": "0f192b7ec147ab6288885d6351d9ab67367640029b4377576ef46dd79cf7b202",
+        "kind": "binary"
+      }
+    }
+  }
+}

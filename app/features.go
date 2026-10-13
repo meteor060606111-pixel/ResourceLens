@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const appVersion = "1.3.0"
+const appVersion = "1.4.0"
 
 type MediaFormat struct {
 	ID        string  `json:"id"`
@@ -464,7 +464,7 @@ func (e *Engine) cleanCache(remove bool) (map[string]any, error) {
 	count := 0
 	for dir := range roots {
 		root := filepath.Join(dir, ".resourcelens-temp")
-		if resolved, err := filepath.EvalSymlinks(root); err != nil || !strings.EqualFold(filepath.Clean(resolved), filepath.Clean(root)) {
+		if !ownedDirectory(dir, root) {
 			continue
 		}
 		entries, _ := os.ReadDir(root)
@@ -477,7 +477,7 @@ func (e *Engine) cleanCache(remove bool) (map[string]any, error) {
 			if err != nil || info.Mode()&os.ModeSymlink != 0 {
 				continue
 			}
-			if resolved, err := filepath.EvalSymlinks(target); err != nil || !strings.EqualFold(filepath.Clean(resolved), filepath.Clean(target)) {
+			if !ownedDirectory(root, target) {
 				continue
 			}
 			filepath.WalkDir(target, func(path string, d os.DirEntry, err error) error {

@@ -42,7 +42,7 @@ func TestWechatOriginalMasksAndCapturedMP4(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(filepath.Join(tools, "ffmpeg.exe"), "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=16x16:d=0.2", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", plainFile)
+	cmd := exec.Command(toolPath(tools, "ffmpeg"), "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=16x16:d=0.2", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", plainFile)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("local fixture: %v %s", err, output)
 	}

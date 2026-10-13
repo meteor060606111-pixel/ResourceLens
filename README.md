@@ -1,18 +1,33 @@
-# 拾流 ResourceLens 1.3.0
+# 拾流 ResourceLens 1.4.0
 
 **Windows 安装版：[下载 ResourceLens-1.3.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.3.0/ResourceLens-1.3.0-Setup.exe)**。双击安装后创建桌面快捷方式，内置下载和视频处理引擎。发布说明及校验文件见 [Releases](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.3.0)。
+
+## macOS 版本
+
+**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.4.0-macos/ResourceLens-1.4.0-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.4.0-macos/ResourceLens-1.4.0-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.4.0-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
+
+需要 macOS 13.5 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎内置。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
+
+默认下载目录为 `~/Downloads/ResourceLens`，配置、日志、证书与任务保存在 `~/Library/Application Support/ResourceLens/data`。首次捕获需要 macOS 网络设置及钥匙串授权；停止捕获或正常退出恢复原代理。更新使用 DMG 拖拽替换应用，保留本机数据。
+
+当前构建使用 ad hoc 本地签名，尚未做 Apple Developer ID 公证。首次启动方法、源码构建、权限与验证边界见 [macOS 说明](installer/macos/README.md)。真实 Mac 微信捕获仍需本机验证；下方旧版微信实测记录均为 Windows 结果。
+
+```bash
+# macOS：需要 Go、Node.js/npm、Python 3 和 Xcode Command Line Tools
+./build-macos.sh
+```
 
 ## 目录导航
 
 | 目录 / 文件 | 用途 |
 | --- | --- |
-| [app](app) | Go 后端、Windows 入口、下载与捕获逻辑、相应测试；内部 helpers 为嵌入脚本 |
+| [app](app) | Go 后端、桌面入口、下载与捕获逻辑、相应测试；内部 helpers 为嵌入脚本 |
 | [frontend](frontend) | Vue 界面、样式和编译后的界面资源入口 |
-| [installer](installer) | Windows 安装程序源码与构建脚本 |
+| [installer](installer) | Windows 安装程序及 [macOS 打包](installer/macos) |
 | [docs](docs) | [版本记录](docs/CHANGELOG.md)与[开发说明](docs/DEVELOPMENT.md) |
 | [video-engine](video-engine) | 独立媒体引擎的来源和许可证；二进制仅保存在本机 |
 | [winres](winres) | Windows 图标、应用版本和清单 |
-| [build.ps1](build.ps1) | 构建前端、检查后端并生成 Windows 应用 |
+| [build.ps1](build.ps1) / [build-macos.sh](build-macos.sh) | 构建前端、检查后端并生成桌面应用 |
 
 本机生成的 data、downloads、tools 和界面 dist 均不进入仓库。
 

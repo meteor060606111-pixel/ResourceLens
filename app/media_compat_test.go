@@ -25,7 +25,7 @@ func TestHEVCPreviewCachePreservesOriginalAndPlaysVideo(t *testing.T) {
 	hevc := filepath.Join(root, "original-hevc.mp4")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	cmd := exec.Command(filepath.Join(tools, "ffmpeg.exe"), "-hide_banner", "-loglevel", "error", "-i", avc, "-c:v", "libx265", "-preset", "ultrafast", "-x265-params", "pools=1:frame-threads=1:log-level=error", "-c:a", "copy", hevc)
+	cmd := exec.Command(toolPath(tools, "ffmpeg"), "-hide_banner", "-loglevel", "error", "-i", avc, "-c:v", "libx265", "-preset", "ultrafast", "-x265-params", "pools=1:frame-threads=1:log-level=error", "-c:a", "copy", hevc)
 	if err := runManagedCommand(ctx, cmd); err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestHEVCPreviewCachePreservesOriginalAndPlaysVideo(t *testing.T) {
 	if !video || !audio {
 		t.Fatal("preview lost video or audio")
 	}
-	decode := exec.Command(filepath.Join(tools, "ffmpeg.exe"), "-v", "error", "-xerror", "-i", preview.File, "-f", "null", "-")
+	decode := exec.Command(toolPath(tools, "ffmpeg"), "-v", "error", "-xerror", "-i", preview.File, "-f", "null", "-")
 	if err := runManagedCommand(ctx, decode); err != nil {
 		t.Fatal("preview did not fully decode", err)
 	}

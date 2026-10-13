@@ -713,31 +713,14 @@ func (e *Engine) videoDownloadInput(ctx context.Context, r *Resource, staging st
 	return []string{"--load-info-json", metadata}, nil
 }
 
-func douyinBrowserExecutable() string {
-	for _, candidate := range []string{
-		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
-		filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
-		filepath.Join(os.Getenv("LOCALAPPDATA"), "Microsoft", "Edge", "Application", "msedge.exe"),
-		filepath.Join(os.Getenv("ProgramFiles"), "Google", "Chrome", "Application", "chrome.exe"),
-		filepath.Join(os.Getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe"),
-	} {
-		if filepath.IsAbs(candidate) {
-			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-				return candidate
-			}
-		}
-	}
-	return ""
-}
-
 func (e *Engine) extractBrowserDouyin(ctx context.Context, raw string) (*douyinPublicVideo, string, error) {
 	dir, err := e.videoTools()
 	if err != nil {
 		return nil, raw, err
 	}
-	node := filepath.Join(dir, "node.exe")
-	if info, err := os.Stat(node); err != nil || info.IsDir() {
-		return nil, raw, errors.New("缺少浏览器解析运行时，请保留 video-engine 中的 node.exe")
+	node := nodeExecutable(dir)
+	if node == "" {
+		return nil, raw, errors.New("缺少浏览器解析运行时，请保留 video-engine 中的 Node.js")
 	}
 	browser := douyinBrowserExecutable()
 	if browser == "" {

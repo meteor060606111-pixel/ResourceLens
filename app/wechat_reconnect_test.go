@@ -103,7 +103,7 @@ if(globalThis.__resourceLensWechatInstalled!==2)throw Error("reinstalled legacy 
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if output, err := exec.CommandContext(ctx, filepath.Join(tools, "node.exe"), file).CombinedOutput(); err != nil {
+	if output, err := exec.CommandContext(ctx, toolPath(tools, "node"), file).CombinedOutput(); err != nil {
 		t.Fatalf("loaded page reconnect: %v %s", err, output)
 	}
 }

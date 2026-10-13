@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -15,14 +14,6 @@ import (
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
-
-type ProxySnapshot struct {
-	Enabled      uint64 `json:"enabled"`
-	Server       string `json:"server"`
-	HasEnabled   bool   `json:"hasEnabled"`
-	HasServer    bool   `json:"hasServer"`
-	OwnedAddress string `json:"ownedAddress"`
-}
 
 const proxyKey = `Software\Microsoft\Windows\CurrentVersion\Internet Settings`
 
@@ -188,69 +179,6 @@ func applyProxy(s ProxySnapshot) error {
 	}
 	notifyProxy()
 	return err
-}
-func (e *Engine) recoveryPath() string { return filepath.Join(e.root, "data", "proxy-recovery.json") }
-func (e *Engine) recoverProxy() error {
-	b, err := os.ReadFile(e.recoveryPath())
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	var old ProxySnapshot
-	if err = json.Unmarshal(b, &old); err != nil {
-		return fmt.Errorf("代理恢复记录损坏：%w", err)
-	}
-	current, err := e.readProxy()
-	if err != nil {
-		return err
-	}
-	if current.Server == old.OwnedAddress && current.Enabled == 1 {
-		if err = e.writeProxy(old); err != nil {
-			return err
-		}
-	}
-	return os.Remove(e.recoveryPath())
-}
-func (e *Engine) enableSystemProxyLocked() error {
-	old, err := e.readProxy()
-	if err != nil {
-		return err
-	}
-	addr := fmt.Sprintf("127.0.0.1:%d", e.config.ProxyPort)
-	old.OwnedAddress = addr
-	b, _ := json.MarshalIndent(old, "", "  ")
-	if err = atomicWrite(e.recoveryPath(), b, 0600); err != nil {
-		return err
-	}
-	next := ProxySnapshot{Enabled: 1, HasEnabled: true, Server: addr, HasServer: true}
-	if err = e.writeProxy(next); err != nil {
-		e.writeProxy(old)
-		os.Remove(e.recoveryPath())
-		return err
-	}
-	e.proxySnapshot = &old
-	return nil
-}
-func (e *Engine) restoreProxyLocked() error {
-	if e.proxySnapshot == nil {
-		return nil
-	}
-	current, err := e.readProxy()
-	if err != nil {
-		return err
-	}
-	if current.Server == e.proxySnapshot.OwnedAddress && current.Enabled == 1 {
-		if err = e.writeProxy(*e.proxySnapshot); err != nil {
-			return err
-		}
-	}
-	if err = os.Remove(e.recoveryPath()); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	e.proxySnapshot = nil
-	return nil
 }
 func (e *Engine) isCertificateInstalled() bool {
 	cmd := exec.Command("certutil.exe", "-user", "-store", "Root", e.ca.Thumbprint)

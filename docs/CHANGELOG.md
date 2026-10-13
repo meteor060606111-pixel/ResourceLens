@@ -1,3 +1,12 @@
+# 1.4.0 · macOS
+
+- 新增 macOS 13.5+ 的 Apple 芯片和 Intel .app / DMG 构建，内置对应媒体引擎。
+- 适配网络服务代理和恢复、登录钥匙串 SSL 信任、Finder 文件定位、进程组取消及单实例激活。
+- 配置保存到 Application Support，下载默认保存到 Downloads/ResourceLens；处理 macOS 路径别名，确保预览缓存和续传识别正确。
+- 新增 DMG 标识、版本、芯片和 SHA-256 核验；更新通过拖拽替换应用。
+- 新增两个 Mac 架构的 GitHub Actions 构建发布及 Windows 兼容检查，保留原 Windows 功能。
+- 安装包为本地签名；Apple 公证和已登录 Mac 微信的真实捕获未作为已验证结果。
+
 # 版本记录
 
 ## 1.3.0

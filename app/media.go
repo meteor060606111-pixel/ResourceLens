@@ -207,7 +207,7 @@ func (e *Engine) extractSinglePreview(ctx context.Context, r *Resource) (string,
 	args = append(args, "-f", "b[ext=mp4]/b", "--skip-download", "--dump-single-json", "--", r.URL)
 	out := &limitedBuffer{limit: 16 << 20}
 	stderr := &tailBuffer{limit: 4096}
-	cmd := exec.Command(filepath.Join(dir, "yt-dlp.exe"), args...)
+	cmd := exec.Command(toolPath(dir, "yt-dlp"), args...)
 	cmd.Stdout, cmd.Stderr = out, stderr
 	if err := runManagedCommand(ctx, cmd); err != nil {
 		return "", nil, errors.New("此页面暂未提供可直接预览的完整音视频流，下载完成后可播放")

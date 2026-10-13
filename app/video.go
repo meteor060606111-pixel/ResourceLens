@@ -45,25 +45,6 @@ func knownVideoPage(u *url.URL) bool {
 	return hostIn(u.Hostname(), "bilibili.com", "b23.tv", "youtube.com", "youtu.be", "vimeo.com", "douyin.com", "iesdouyin.com", "kuaishou.com", "kwai.com", "xiaohongshu.com", "xhslink.com", "twitter.com", "x.com")
 }
 
-// Executables are shipped alongside the app; tests and source builds also use the project directory.
-func (e *Engine) videoTools() (string, error) {
-	exe, _ := os.Executable()
-	cwd, _ := os.Getwd()
-	for _, root := range []string{filepath.Dir(exe), e.root, cwd, filepath.Dir(cwd)} {
-		dir := filepath.Join(root, "video-engine")
-		found := true
-		for _, name := range []string{"yt-dlp.exe", "ffmpeg.exe", "ffprobe.exe"} {
-			if info, err := os.Stat(filepath.Join(dir, name)); err != nil || info.IsDir() {
-				found = false
-				break
-			}
-		}
-		if found {
-			return dir, nil
-		}
-	}
-	return "", errors.New("视频引擎缺失，请把便携包中的 video-engine 文件夹与 ResourceLens.exe 放在一起")
-}
 func extractorArgs(dir string, headers http.Header) []string {
 	a := []string{"--ignore-config", "--no-playlist", "--no-warnings", "--no-color", "--no-cache-dir", "--proxy", "", "--socket-timeout", "20", "--retries", "2", "--fragment-retries", "3", "--extractor-retries", "1", "--ffmpeg-location", dir, "--windows-filenames", "--trim-filenames", "120", "-f", videoFormat}
 	// Only forward the same resource's required headers, never import browser credentials.
@@ -72,8 +53,8 @@ func extractorArgs(dir string, headers http.Header) []string {
 			a = append(a, "--add-header", key+":"+v)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(dir, "node.exe")); err == nil {
-		a = append(a, "--js-runtimes", "node:"+filepath.Join(dir, "node.exe"))
+	if node := nodeExecutable(dir); node != "" {
+		a = append(a, "--js-runtimes", "node:"+node)
 	}
 	return a
 }
@@ -138,7 +119,7 @@ func (e *Engine) resolveVideoWithContext(ctx context.Context, raw string, header
 	var out limitedBuffer
 	out.limit = 16 << 20
 	stderr := &tailBuffer{limit: 64 << 10}
-	cmd := exec.Command(filepath.Join(dir, "yt-dlp.exe"), args...)
+	cmd := exec.Command(toolPath(dir, "yt-dlp"), args...)
 	cmd.Stdout, cmd.Stderr = &out, stderr
 	if err = runManagedCommand(ctx, cmd); err != nil {
 		return nil, videoError(ctx, stderr.String(), err)
@@ -281,7 +262,7 @@ func validateMP4(ctx context.Context, dir, file string) error {
 	defer cancel()
 	out := &limitedBuffer{limit: 2 << 20}
 	stderr := &tailBuffer{limit: 8192}
-	cmd := exec.Command(filepath.Join(dir, "ffprobe.exe"), "-v", "error", "-show_entries", "format=format_name,duration:stream=codec_type", "-of", "json", file)
+	cmd := exec.Command(toolPath(dir, "ffprobe"), "-v", "error", "-show_entries", "format=format_name,duration:stream=codec_type", "-of", "json", file)
 	cmd.Stdout, cmd.Stderr = out, stderr
 	if err = runManagedCommand(probeCtx, cmd); err != nil {
 		if ctx.Err() != nil {
