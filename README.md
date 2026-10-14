@@ -1,10 +1,10 @@
-# 拾流 ResourceLens 1.5.0
+# 拾流 ResourceLens 1.5.1
 
 **Windows 安装版：[下载 ResourceLens-1.3.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.3.0/ResourceLens-1.3.0-Setup.exe)**。双击安装后创建桌面快捷方式，内置下载和视频处理引擎。发布说明及校验文件见 [Releases](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.3.0)。
 
 ## macOS 版本
 
-**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.0-macos/ResourceLens-1.5.0-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.0-macos/ResourceLens-1.5.0-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.5.0-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
+**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.1-macos/ResourceLens-1.5.1-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.1-macos/ResourceLens-1.5.1-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.5.1-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
 
 需要 macOS 13.5 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎内置。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
 

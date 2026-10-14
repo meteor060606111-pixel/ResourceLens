@@ -13,9 +13,9 @@ async function add(urls,clear){await run(async()=>{if(!urls.length)throw Error('
 async function download(id,force=false,quality){await run(async()=>{try{await api('download',{id,force,quality:quality||qualities.value[id]||'best'});page.value='downloads';toast('已加入 Mac 下载队列')}catch(e){if(e.message.startsWith('DUPLICATE:')){if(window.confirm('内容已经下载过，是否重新下载？')){await api('download',{id,force:true,quality:quality||qualities.value[id]||'best'});page.value='downloads'}}else throw e}})}
 async function downloadMany(ids,settle){await run(async()=>{
   const unique=[...new Set(ids)];if(!unique.length||unique.length>20)throw Error('每次请选择 1 至 20 个资源');
-  const handled=[];let queued=0,skipped=0,failed=0;
+  const handled=[];const completedIds=new Set(state.value.jobs.filter(j=>j.status==='completed').map(j=>j.id));let queued=0,skipped=0,failed=0;
   for(const id of unique){
-    try{await api('download',{id,quality:qualities.value[id]||'best'});queued++;handled.push(id)}
+    try{const jobId=await api('download',{id,quality:qualities.value[id]||'best'});if(completedIds.has(jobId))skipped++;else queued++;handled.push(id)}
     catch(error){
       if(error.message.startsWith('DUPLICATE:')){skipped++;handled.push(id);continue}
       failed++;
