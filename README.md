@@ -1,10 +1,10 @@
-# 拾流 ResourceLens 1.5.1
+# 拾流 ResourceLens 1.6.0
 
 **Windows 安装版：[下载 ResourceLens-1.3.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.3.0/ResourceLens-1.3.0-Setup.exe)**。双击安装后创建桌面快捷方式，内置下载和视频处理引擎。发布说明及校验文件见 [Releases](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.3.0)。
 
 ## macOS 版本
 
-**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.1-macos/ResourceLens-1.5.1-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.1-macos/ResourceLens-1.5.1-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.5.1-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
+**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.0-macos/ResourceLens-1.6.0-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.0-macos/ResourceLens-1.6.0-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.6.0-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
 
 需要 macOS 13.5 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎内置。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
 
@@ -17,10 +17,23 @@
 ./build-macos.sh
 ```
 
+## 1.6.0 桌面工作台
+
+- 半透明玻璃导航、浮动工作区和蓝色胶囊控件。macOS 窗口接入系统背景模糊，透出蓝紫色光影，并通过清晰的边缘反光表现玻璃厚度；内容区保留清晰对比。捕获状态改为紧凑提示，视频号说明按需展开；资源详情使用独立侧栏，小窗口自动切换抽屉。
+- 资源列表恢复清晰表头，按捕获时间、名称或大小排序。支持多个关键词搜索；类型筛选显示真实数量，画质选择、关联资源、预览、复制链接和批量操作保留。
+- 下载页用列表展示进度、速度、状态和对应操作；任务名称、路径搜索可与状态筛选组合使用。暂停、续传、重试、预览和 Finder 定位继续通过原下载引擎执行。
+- 设置分为「下载与文件、网络捕获、界面外观、设备连接、维护、关于与更新」。保存按钮始终可见，未保存草稿跨类别和页面保留，修复快速切换导航时显示错误页面的问题。
+- 动态玻璃：缓慢流动的背景、跟随鼠标的按钮高光（按钮本体保持稳定）、面板展开与下载进度光带。设置 → 界面外观可调整透明程度、减少透明或动态效果，偏好自动保存在本机，并尊重系统辅助功能设置。
+- 快捷键：`⌘/Ctrl + N` 添加链接，`⌘/Ctrl + F` 搜索，`⌘/Ctrl + 1–4` 切换页面，`Esc` 关闭详情或对话框。设置类别支持方向键切换。
+
+材质参考 [Apple Liquid Glass 设计规范](https://developer.apple.com/design/human-interface-guidelines/materials)，采用 Wails 原生 macOS 背景模糊与 Web 材质实现。界面结构参考了 [Gopeed](https://github.com/GopeedLab/gopeed) 的导航、任务进度与设计参数，以及 [AB Download Manager](https://github.com/amir1376/ab-download-manager) 的列表、排序和批量选择交互。保持 Vue / Wails 实现，未引入参考项目的运行依赖。手机功能未在本轮扩展。
+
+本地检查覆盖真实批量下载、暂停续传、完成文件预览、排序搜索、设置草稿及保存；下载文件逐项核对 SHA-256。前端辅助逻辑与原手机传输测试共 10 项，并保留 Go 后端测试、`go vet` 和 macOS / Windows 构建检查。
+
 ## iPhone 伴侣页面
 
 1. Mac 和 iPhone 连接同一可信 Wi-Fi，打开 Mac 上的拾流。
-2. 在「设置 → iPhone 连接」中开启手机连接。
+2. 在「设置 → 设备连接 → iPhone 连接」中开启手机连接。
 3. 在 iPhone Safari 打开 Mac 显示的地址，输入 8 位配对码。
 4. 粘贴链接、选择画质并提交下载；文件先下载至 Mac，完成后可以预览并保存到手机。
 5. Safari 分享菜单选择「添加到主屏幕」，以后从主屏幕图标打开。

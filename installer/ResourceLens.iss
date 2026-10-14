@@ -1,5 +1,5 @@
 #define AppName "拾流 ResourceLens"
-#define AppVersion "1.5.1"
+#define AppVersion "1.6.0"
 #ifndef ReleaseOutput
   #define ReleaseOutput "..\release"
 #endif
@@ -25,7 +25,7 @@ UninstallDisplayIcon={app}\ResourceLens.exe
 UninstallDisplayName={#AppName}
 OutputDir={#ReleaseOutput}
 OutputBaseFilename=拾流-{#AppVersion}-安装程序
-VersionInfoVersion=1.5.1.0
+VersionInfoVersion=1.6.0.0
 VersionInfoProductName={#AppName}
 VersionInfoDescription=拾流安装程序
 Compression=lzma2
