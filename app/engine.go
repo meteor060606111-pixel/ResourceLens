@@ -38,6 +38,7 @@ type Config struct {
 	DuplicatePolicy string `json:"duplicatePolicy"`
 	UpdateURL       string `json:"updateUrl"`
 	OnboardingDone  bool   `json:"onboardingDone"`
+	MobilePort      int    `json:"mobilePort"`
 }
 type Resource struct {
 	ID                    string            `json:"id"`
@@ -136,6 +137,9 @@ type Engine struct {
 	batches                map[string]*ParseBatch
 	update                 UpdateInfo
 	douyinSources          map[string]cachedDouyinSource
+	ui                     fs.FS
+	mobileMu               sync.Mutex
+	mobile                 *MobileGateway
 }
 
 func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
@@ -176,6 +180,7 @@ func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
 	}
 	e := &Engine{root: root, config: cfg, token: hex.EncodeToString(token), resources: map[string]*Resource{}, jobs: map[string]*Job{}, ctx: ctx, cancel: cancel, conns: map[net.Conn]bool{}, downloadSem: make(chan struct{}, cfg.Concurrent), transport: &http.Transport{Proxy: nil, ForceAttemptHTTP2: false, DisableCompression: true, MaxIdleConns: 100, IdleConnTimeout: 60 * time.Second, TLSHandshakeTimeout: 15 * time.Second, ResponseHeaderTimeout: 30 * time.Second, DialContext: (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext}}
 	e.readProxy = proxyState
+	e.ui = ui
 	e.writeProxy = applyProxy
 	if e.wechatBridgeKey, err = loadWechatBridgeKey(filepath.Join(root, "data")); err != nil {
 		cancel()
@@ -230,6 +235,9 @@ func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
 	return e, nil
 }
 func validateConfig(c Config) error {
+	if c.MobilePort != 0 && (c.MobilePort < 1024 || c.MobilePort > 65535) {
+		return errors.New("手机连接端口须在 1024–65535 之间")
+	}
 	if !filepath.IsAbs(c.DownloadDir) || c.Segments < 1 || c.Segments > 16 || c.Concurrent < 1 || c.Concurrent > 6 || c.ProxyPort < 1024 || c.ProxyPort > 65535 {
 		return errors.New("设置无效：目录须为绝对路径，分段 1–16，并行任务 1–6，端口 1024–65535")
 	}
@@ -256,6 +264,7 @@ func (e *Engine) bootstrap() map[string]any {
 func (e *Engine) Close() {
 	e.closeOnce.Do(func() {
 		e.cancel()
+		e.stopMobile()
 		e.mu.Lock()
 		e.capture = false
 		err := e.restoreProxyLocked()
@@ -282,6 +291,7 @@ func (e *Engine) Close() {
 	})
 }
 func (e *Engine) state() map[string]any {
+	mobile := e.mobileStatus()
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	rs := make([]Resource, 0, len(e.resources))
@@ -318,7 +328,7 @@ func (e *Engine) state() map[string]any {
 		copy.Items = append([]ParseItem(nil), b.Items...)
 		bs = append(bs, copy)
 	}
-	return map[string]any{"resources": rs, "jobs": js, "batches": bs, "update": e.update, "config": e.config, "capture": e.capture, "certificateInstalled": e.certInstalled.Load(), "certificatePath": e.ca.certPath, "proxyAddress": fmt.Sprintf("127.0.0.1:%d", e.config.ProxyPort), "version": appVersion, "platform": runtime.GOOS, "arch": runtime.GOARCH}
+	return map[string]any{"resources": rs, "jobs": js, "batches": bs, "update": e.update, "config": e.config, "capture": e.capture, "certificateInstalled": e.certInstalled.Load(), "certificatePath": e.ca.certPath, "proxyAddress": fmt.Sprintf("127.0.0.1:%d", e.config.ProxyPort), "version": appVersion, "platform": runtime.GOOS, "arch": runtime.GOARCH, "mobile": mobile}
 }
 func (e *Engine) allowedOrigin(origin string) bool {
 	return origin == "" || origin == e.baseURL || origin == "http://wails.localhost" || origin == "https://wails.localhost" || runtime.GOOS == "darwin" && origin == "wails://wails"
@@ -380,6 +390,15 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 	var result any
 	var err error
 	switch r.URL.Path {
+	case "/api/mobile-enable":
+		if in.Enabled {
+			err = e.startMobile()
+		} else {
+			e.stopMobile()
+		}
+		result = e.mobileStatus()
+	case "/api/mobile-code":
+		result, err = e.rotateMobileCode()
 	case "/api/capture":
 		e.mu.Lock()
 		if in.Enabled {

@@ -1,10 +1,10 @@
-# 拾流 ResourceLens 1.4.0
+# 拾流 ResourceLens 1.5.0
 
 **Windows 安装版：[下载 ResourceLens-1.3.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.3.0/ResourceLens-1.3.0-Setup.exe)**。双击安装后创建桌面快捷方式，内置下载和视频处理引擎。发布说明及校验文件见 [Releases](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.3.0)。
 
 ## macOS 版本
 
-**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.4.0-macos/ResourceLens-1.4.0-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.4.0-macos/ResourceLens-1.4.0-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.4.0-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
+**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.0-macos/ResourceLens-1.5.0-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.5.0-macos/ResourceLens-1.5.0-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.5.0-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
 
 需要 macOS 13.5 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎内置。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
 
@@ -16,6 +16,16 @@
 # macOS：需要 Go、Node.js/npm、Python 3 和 Xcode Command Line Tools
 ./build-macos.sh
 ```
+
+## iPhone 伴侣页面
+
+1. Mac 和 iPhone 连接同一可信 Wi-Fi，打开 Mac 上的拾流。
+2. 在「设置 → iPhone 连接」中开启手机连接。
+3. 在 iPhone Safari 打开 Mac 显示的地址，输入 8 位配对码。
+4. 粘贴链接、选择画质并提交下载；文件先下载至 Mac，完成后可以预览并保存到手机。
+5. Safari 分享菜单选择「添加到主屏幕」，以后从主屏幕图标打开。
+
+这是一套由 Mac 提供的手机网页应用，无需 iOS 安装包。Mac 必须保持运行并唤醒；手机网页不能独立下载。停止手机连接、退出或重启拾流会撤销所有手机会话，需要重新配对。手机端不能修改系统代理、证书或下载目录，也不会接收 Mac 的媒体来源 Cookie 和桌面管理令牌。详细保存方法及限制见 [iPhone 使用说明](installer/macos/IPHONE.md)。
 
 ## 目录导航
 

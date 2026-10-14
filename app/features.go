@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const appVersion = "1.4.0"
+const appVersion = "1.5.0"
 
 type MediaFormat struct {
 	ID        string  `json:"id"`

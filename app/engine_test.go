@@ -44,7 +44,9 @@ func testEngine(t *testing.T, concurrent int) *Engine {
 }
 func waitJob(t *testing.T, e *Engine, id string) *Job {
 	t.Helper()
-	until := time.Now().Add(15 * time.Second)
+	// Bundled yt-dlp can take over 25 seconds to start on a busy macOS host.
+	// Keep the output and byte validation strict while bounding that startup.
+	until := time.Now().Add(60 * time.Second)
 	for time.Now().Before(until) {
 		e.mu.RLock()
 		j := e.jobs[id]
@@ -55,7 +57,11 @@ func waitJob(t *testing.T, e *Engine, id string) *Job {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	t.Fatal("job timeout")
+	e.mu.RLock()
+	j := e.jobs[id]
+	status, detail, notice, done, total := j.Status, j.Error, j.Notice, j.done.Load(), j.Total
+	e.mu.RUnlock()
+	t.Fatalf("job timeout: status=%s done=%d total=%d error=%s notice=%s", status, done, total, detail, notice)
 	return nil
 }
 func TestProxyCaptureAndRangeDownloadIdentity(t *testing.T) {

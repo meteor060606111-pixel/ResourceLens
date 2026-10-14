@@ -33,6 +33,7 @@ done
 npm ci --prefix frontend --ignore-scripts
 npm run build --prefix frontend
 if [ "${RESOURCELENS_SKIP_TESTS:-0}" != 1 ]; then
+  npm test --prefix frontend
   "$resourcelens_go" test -tags desktop,production ./app ./frontend
   "$resourcelens_go" vet -tags desktop,production ./app ./frontend
 fi
@@ -49,6 +50,7 @@ done
 cp video-engine/yt-dlp-LICENSE.txt video-engine/yt-dlp-THIRD_PARTY_LICENSES.txt video-engine/ffmpeg-LICENSE video-engine/ORIGIN.md video-engine/MACOS.md "$resourcelens_bundle/Contents/Resources/video-engine/"
 cp "$resourcelens_tools/node-LICENSE.txt" installer/macos/toolchain.json "$resourcelens_bundle/Contents/Resources/video-engine/"
 cp LICENSE "$resourcelens_bundle/Contents/Resources/ResourceLens-LICENSE.txt"
+cp frontend/dist/third-party-notices.txt "$resourcelens_bundle/Contents/Resources/Frontend-THIRD_PARTY_NOTICES.txt"
 "$resourcelens_tools/ffmpeg" -version > "$resourcelens_bundle/Contents/Resources/video-engine/ffmpeg-build.txt" 2>&1 || true
 
 resourcelens_icons="$resourcelens_out/ResourceLens.iconset"

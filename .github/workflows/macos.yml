@@ -72,6 +72,7 @@ jobs:
         run: |
           npm ci --prefix frontend --ignore-scripts
           npm run build --prefix frontend
+          npm test --prefix frontend
           go test -tags 'desktop,production' ./app ./frontend
           go vet -tags 'desktop,production' ./app ./frontend
           go build -tags 'desktop,production' -o release/ResourceLens.exe ./app

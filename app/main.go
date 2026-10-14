@@ -37,6 +37,7 @@ func (a *App) ChooseUpdateFile() (string, error) {
 
 func main() {
 	headless := flag.Bool("headless", false, "serve the same interface in a browser")
+	mobile := flag.Bool("mobile", false, "enable the paired phone interface for this run")
 	root := flag.String("root", "", "application data directory")
 	apiPort := flag.Int("api-port", 0, "local UI port; 0 selects a free port")
 	updateTask := flag.String("update-worker", "", "internal update task")
@@ -65,7 +66,9 @@ func main() {
 		var err error
 		*root, err = defaultApplicationRoot()
 		if err != nil {
-			startupError(err)
+			if !*headless {
+				startupError(err)
+			}
 			return
 		}
 	}
@@ -87,6 +90,15 @@ func main() {
 	}
 	defer engine.Close()
 	engine.loadUpdateInfo()
+	if *mobile {
+		if err := engine.startMobile(); err != nil {
+			log.Print(err)
+			if !*headless {
+				startupError(err)
+			}
+			return
+		}
+	}
 	if *headless {
 		fmt.Println(engine.baseURL)
 		ch := make(chan os.Signal, 1)

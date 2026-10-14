@@ -6,8 +6,8 @@
   <key>CFBundleDisplayName</key><string>拾流 ResourceLens</string>
   <key>CFBundleExecutable</key><string>ResourceLens</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.4.0</string>
-  <key>CFBundleVersion</key><string>1.4.0</string>
+  <key>CFBundleShortVersionString</key><string>1.5.0</string>
+  <key>CFBundleVersion</key><string>1.5.0</string>
   <key>CFBundleIconFile</key><string>ResourceLens.icns</string>
   <key>LSMinimumSystemVersion</key><string>13.5</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
@@ -17,5 +17,6 @@
     <key>NSAllowsArbitraryLoads</key><true/>
     <key>NSAllowsArbitraryLoadsInWebContent</key><true/>
   </dict>
+  <key>NSLocalNetworkUsageDescription</key><string>开启手机连接后，让同一 Wi-Fi 下配对的 iPhone 查看下载任务并保存文件。</string>
   <key>NSAppleEventsUsageDescription</key><string>拾流在开始和停止捕获时，通过系统授权临时设置并恢复网络代理。</string>
 </dict></plist>
