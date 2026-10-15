@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"time"
 )
@@ -130,6 +131,13 @@ func (e *Engine) launchDownloadLocked(ctx context.Context, cancel context.Cancel
 				err = e.download(ctx, j, &copyResource, cfg)
 			}
 		}
+		if err == nil && copyResource.Music != nil {
+			if lyricErr := writeMusicLyrics(j.File, copyResource.Music); lyricErr != nil {
+				e.mu.Lock()
+				j.completionNotice += " 音频已保存，歌词文件写入失败，请检查目录权限"
+				e.mu.Unlock()
+			}
+		}
 		e.finishJob(j, err)
 	}()
 }
@@ -138,7 +146,7 @@ func (e *Engine) finishJob(j *Job, err error) {
 	if err == nil {
 		j.Status = "completed"
 		j.Percent = 100
-		j.Notice = ""
+		j.Notice = strings.TrimSpace(j.completionNotice)
 		j.ResumeAvailable = false
 	} else if errors.Is(err, context.Canceled) || e.ctx.Err() != nil {
 		j.Status = "cancelled"

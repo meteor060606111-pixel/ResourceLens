@@ -43,5 +43,5 @@ export function shortcutAction(event, hasDialog = false) {
   if (key === 'n') return 'add';
   if (key === 'f') return 'search';
   // Do not consume input-editing chords or the macOS/Windows system shortcuts.
-  return ({'1': 'capture', '2': 'downloads', '3': 'settings', '4': 'help'})[key] || '';
+  return ({'1': 'capture', '2': 'downloads', '3': 'settings', '4': 'help', '5':'music'})[key] || '';
 }

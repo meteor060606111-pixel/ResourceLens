@@ -67,6 +67,20 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24.19.0'
+      - name: Prepare media tools for Windows integration tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $fixtureInstaller = Join-Path $env:RUNNER_TEMP 'ResourceLens-1.6.0-Setup.exe'
+          Invoke-WebRequest -Uri 'https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.0-windows/ResourceLens-1.6.0-Setup.exe' -OutFile $fixtureInstaller
+          $expectedHash = 'd4a43c658ecd12112272805f982d6b3e808b3679cba4b6641fe81fd2df792496'
+          if ((Get-FileHash -LiteralPath $fixtureInstaller -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expectedHash) { throw 'Media fixture installer checksum mismatch' }
+          $fixtureRoot = Join-Path $env:RUNNER_TEMP 'ResourceLens-integration-fixtures'
+          $fixtureProcess = Start-Process -FilePath $fixtureInstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',('/DIR="' + $fixtureRoot + '"')) -WindowStyle Hidden -Wait -PassThru
+          if ($fixtureProcess.ExitCode -ne 0) { throw ('Media fixture install failed: ' + $fixtureProcess.ExitCode) }
+          foreach ($tool in @('ffmpeg.exe','ffprobe.exe','yt-dlp.exe','node.exe')) {
+            Copy-Item -LiteralPath (Join-Path $fixtureRoot ('video-engine\' + $tool)) -Destination (Join-Path $env:GITHUB_WORKSPACE ('video-engine\' + $tool))
+          }
       - name: Check existing Windows implementation
         shell: pwsh
         run: |

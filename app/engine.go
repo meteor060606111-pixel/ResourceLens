@@ -66,6 +66,7 @@ type Resource struct {
 	WechatFormats         []WechatFormat    `json:"wechatFormats,omitempty"`
 	WechatResolvedQuality string            `json:"wechatResolvedQuality,omitempty"`
 	Quality               string            `json:"quality,omitempty"`
+	Music                 *MusicInfo        `json:"music,omitempty"`
 	Width                 int               `json:"width,omitempty"`
 	Height                int               `json:"height,omitempty"`
 	CaptureRequired       bool              `json:"captureRequired,omitempty"`
@@ -91,6 +92,7 @@ type Job struct {
 	RequestedQuality string    `json:"requestedQuality,omitempty"`
 	OutputDir        string    `json:"outputDir,omitempty"`
 	pauseRequested   bool
+	completionNotice string
 	done             atomic.Int64
 	cancel           context.CancelFunc
 	started          time.Time
@@ -140,6 +142,11 @@ type Engine struct {
 	ui                     fs.FS
 	mobileMu               sync.Mutex
 	mobile                 *MobileGateway
+	musicSearchMu          sync.Mutex
+	musicProbeMu           sync.Mutex
+	musicProbe             MusicStatus
+	musicProbeUntil        time.Time
+	musicRunner            func(context.Context, musicBridgeRequest) (musicBridgeResponse, error)
 }
 
 func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
@@ -366,6 +373,10 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 		e.writeJSON(w, e.wechatStatus(), nil)
 		return
 	}
+	if r.Method == "GET" && r.URL.Path == "/api/music/status" {
+		e.writeJSON(w, e.musicStatus(r.Context()), nil)
+		return
+	}
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", 405)
 		return
@@ -382,6 +393,8 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 		Path     string   `json:"path"`
 		Mode     string   `json:"mode"`
 		Config   Config   `json:"config"`
+		Keyword  string   `json:"keyword"`
+		Sources  []string `json:"sources"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in); err != nil {
 		e.writeJSON(w, nil, errors.New("请求格式无效"))
@@ -390,6 +403,10 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 	var result any
 	var err error
 	switch r.URL.Path {
+	case "/api/music/search":
+		result, err = e.searchMusic(r.Context(), in.Keyword, in.Sources)
+	case "/api/music/playlist":
+		result, err = e.importMusicPlaylist(r.Context(), in.URL, in.Sources)
 	case "/api/mobile-enable":
 		if in.Enabled {
 			err = e.startMobile()

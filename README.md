@@ -1,6 +1,8 @@
-# 拾流 ResourceLens 1.6.0
+# 拾流 ResourceLens 1.6.3
 
-**Windows 安装版：[下载 ResourceLens-1.6.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.0-windows/ResourceLens-1.6.0-Setup.exe)**。支持 Windows 10/11 x64，双击安装后创建桌面快捷方式，内置下载和视频处理引擎。发布说明及校验文件见 [Windows Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.6.0-windows)。
+1.6.3 集成「音乐搜索 / 导入歌单」：按歌名或歌手搜索，或粘贴公开歌单链接，试听后单首或批量下载，保存音源附带的 `.lrc` 歌词。下载完成前验证音轨和解码，短音源提示可能为试听片段；不兼容格式使用独立播放缓存。Windows 安装包内置可移动 Python/musicdl 2.14.1，安装后无需另装 Python。平台选择框与搜索栏统一玻璃样式，支持小窗口和键盘操作。音乐引擎按上游 PolyForm Noncommercial 1.0.0 单独授权，适用于个人非商业用途，详见 [音乐引擎说明](music-engine/README.md)。
+
+**Windows 安装版：[下载 ResourceLens-1.6.3-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.3-windows/ResourceLens-1.6.3-Setup.exe)**。支持 Windows 10/11 x64，双击安装后创建桌面快捷方式，内置下载、视频处理和音乐引擎。发布说明及校验文件见 [Windows Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.6.3-windows)。
 
 Windows 已适配 1.6.0 玻璃桌面工作台和 iPhone 伴侣页面。Windows 11 22H2 及以上接入系统 Acrylic 模糊材质，较早系统使用窗口模糊回退；保留半透明面板、蓝紫光影与鼠标高光。使用 Windows 代理、证书、文件定位及进程管理实现。版本信息与安装脚本统一跟随应用版本，手机页面使用通用「电脑」提示。[Windows 检查记录](docs/WINDOWS-1.6.0-CHECK.md)。
 
@@ -26,7 +28,7 @@ Windows 已适配 1.6.0 玻璃桌面工作台和 iPhone 伴侣页面。Windows 1
 - 下载页用列表展示进度、速度、状态和对应操作；任务名称、路径搜索可与状态筛选组合使用。暂停、续传、重试、预览和 Finder 定位继续通过原下载引擎执行。
 - 设置分为「下载与文件、网络捕获、界面外观、设备连接、维护、关于与更新」。保存按钮始终可见，未保存草稿跨类别和页面保留，修复快速切换导航时显示错误页面的问题。
 - 动态玻璃：缓慢流动的背景、跟随鼠标的按钮高光（按钮本体保持稳定）、面板展开与下载进度光带。设置 → 界面外观可调整透明程度、减少透明或动态效果，偏好自动保存在本机，并尊重系统辅助功能设置。
-- 快捷键：`⌘/Ctrl + N` 添加链接，`⌘/Ctrl + F` 搜索，`⌘/Ctrl + 1–4` 切换页面，`Esc` 关闭详情或对话框。设置类别支持方向键切换。
+- 快捷键：`⌘/Ctrl + N` 添加链接，`⌘/Ctrl + F` 搜索，`⌘/Ctrl + 1–5` 切换页面，`Esc` 关闭详情或对话框。设置类别支持方向键切换。
 
 材质参考 [Apple Liquid Glass 设计规范](https://developer.apple.com/design/human-interface-guidelines/materials)，采用 Wails 原生 macOS 背景模糊与 Web 材质实现。界面结构参考了 [Gopeed](https://github.com/GopeedLab/gopeed) 的导航、任务进度与设计参数，以及 [AB Download Manager](https://github.com/amir1376/ab-download-manager) 的列表、排序和批量选择交互。保持 Vue / Wails 实现，未引入参考项目的运行依赖。手机功能未在本轮扩展。
 

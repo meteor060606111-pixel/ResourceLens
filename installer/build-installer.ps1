@@ -13,6 +13,12 @@ if ($installerApp.VersionInfo.ProductVersion -ne $installerVersion) { throw ('Ap
 foreach ($installerTool in @('ffmpeg.exe','ffprobe.exe','yt-dlp.exe','node.exe')) {
     if (-not (Test-Path -LiteralPath (Join-Path $installerProject ('video-engine\' + $installerTool)) -PathType Leaf)) { throw ('Missing bundled tool: ' + $installerTool) }
 }
+$installerMusicPython = Join-Path $installerProject 'music-engine\runtime\python.exe'
+if (-not (Test-Path -LiteralPath $installerMusicPython -PathType Leaf)) { throw 'Build the portable music runtime with music-engine/build_runtime.py first.' }
+$installerMusicProbe = & $installerMusicPython -B -X utf8 -c 'import json,musicdl; from musicdl.modules.sources import MusicClientBuilder; print(json.dumps(dict(version=musicdl.__version__,sources=len(MusicClientBuilder.REGISTERED_MODULES))))'
+if ($LASTEXITCODE -ne 0) { throw 'Bundled music engine cannot start.' }
+$installerMusicStatus = $installerMusicProbe | ConvertFrom-Json
+if ($installerMusicStatus.version -ne '2.14.1' -or $installerMusicStatus.sources -ne 57) { throw 'Unexpected bundled music engine version or registry.' }
 $installerBootstrap = Join-Path $PSScriptRoot 'deps\MicrosoftEdgeWebview2Setup.exe'
 $installerSignature = Get-AuthenticodeSignature -LiteralPath $installerBootstrap
 if ($installerSignature.Status -ne 'Valid' -or $installerSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'WebView2 bootstrapper must have a valid Microsoft signature.' }
@@ -29,6 +35,9 @@ $installerManifest = [pscustomobject]@{
     sha256=(Get-FileHash -LiteralPath $installerExe -Algorithm SHA256).Hash.ToLower()
     applicationSha256=(Get-FileHash -LiteralPath $installerApp.FullName -Algorithm SHA256).Hash.ToLower()
     bootstrapperSha256=(Get-FileHash -LiteralPath $installerBootstrap -Algorithm SHA256).Hash.ToLower()
+    musicdlVersion=$installerMusicStatus.version
+    musicSources=$installerMusicStatus.sources
+    pythonSha256=(Get-FileHash -LiteralPath $installerMusicPython -Algorithm SHA256).Hash.ToLower()
     compilerVersion='6.7.3'
     compilerSha256=(Get-FileHash -LiteralPath $Compiler -Algorithm SHA256).Hash.ToLower()
     desktopShortcut='拾流 ResourceLens.lnk'

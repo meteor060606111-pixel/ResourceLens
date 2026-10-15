@@ -95,7 +95,9 @@ func (e *Engine) createMediaTicket(id, mode string) (any, error) {
 		}
 		ticket.File, quality, note = local.File, local.Quality, local.Note
 		width, height = local.Width, local.Height
-		if local.Compatible {
+		if local.MIME != "" {
+			ticket.Type = local.MIME
+		} else if local.Compatible {
 			ticket.Type = "video/mp4"
 		}
 	} else if mode == "poster" {
@@ -191,6 +193,18 @@ func (e *Engine) createMediaTicket(id, mode string) (any, error) {
 }
 
 func mediaFileType(file string) string {
+	switch strings.ToLower(filepath.Ext(file)) {
+	case ".ape":
+		return "audio/x-ape"
+	case ".wma":
+		return "audio/x-ms-wma"
+	case ".alac":
+		return "audio/alac"
+	case ".aiff":
+		return "audio/aiff"
+	case ".mka":
+		return "audio/x-matroska"
+	}
 	mt := mime.TypeByExtension(filepath.Ext(file))
 	if mt == "" {
 		return "application/octet-stream"

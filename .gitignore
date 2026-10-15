@@ -26,3 +26,6 @@
 *.app/
 *.dmg
 __pycache__/
+/music-engine/venv/
+/music-engine/runtime/
+/music-engine/.runtime-build-*/

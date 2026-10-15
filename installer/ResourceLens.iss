@@ -1,13 +1,21 @@
-#define AppName "拾流 ResourceLens"
+#ifdef ValidationBuild
+  #define AppName "拾流 ResourceLens 音乐安装验证"
+  #define AppIdentity "{{D640C293-C22D-4555-817F-80C417FB0805}"
+  #define ModelIdentity "ResourceLens.MusicInstallerValidation"
+#else
+  #define AppName "拾流 ResourceLens"
+  #define AppIdentity "{{9DA5F698-13BD-47E4-A0E7-6B1A4DDD2764}"
+  #define ModelIdentity "ResourceLens.Desktop"
+#endif
 #ifndef AppVersion
-  #define AppVersion "1.6.0"
+  #define AppVersion "1.6.3"
 #endif
 #ifndef ReleaseOutput
   #define ReleaseOutput "..\release"
 #endif
 
 [Setup]
-AppId={{9DA5F698-13BD-47E4-A0E7-6B1A4DDD2764}
+AppId={#AppIdentity}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=ResourceLens
@@ -89,7 +97,7 @@ BrowseDialogTitle=选择文件夹
 BrowseDialogLabel=选择安装文件夹，然后点击“确定”。
 NewFolderName=新建文件夹
 WelcomeLabel1=欢迎安装 [name]
-WelcomeLabel2=将安装 [name/ver] 并创建桌面快捷方式。%n%n包含所需下载引擎；缺少 WebView2 时自动联网安装。%n%n点击“下一步”开始。
+WelcomeLabel2=将安装 [name/ver] 并创建桌面快捷方式。%n%n包含下载、视频和音乐引擎，无需另装 Python；缺少 WebView2 时自动联网安装。%n%n点击“下一步”开始。
 WizardSelectDir=选择安装位置
 SelectDirDesc=将 [name] 安装到哪个文件夹？
 SelectDirLabel3=程序将安装到下面的文件夹中。
@@ -154,14 +162,17 @@ UninstalledMost=%1 已卸载。使用过程中产生的文件已保留。
 [Files]
 Source: "..\ResourceLens.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\video-engine\*"; DestDir: "{app}\video-engine"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\music-engine\runtime\*"; DestDir: "{app}\music-engine\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\music-engine\README.md"; DestDir: "{app}\music-engine"; Flags: ignoreversion
+Source: "..\music-engine\准备音乐引擎.ps1"; DestDir: "{app}\music-engine"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\启动拾流.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Source: "deps\MicrosoftEdgeWebview2Setup.exe"; Flags: dontcopy
 
 [Icons]
-Name: "{userdesktop}\{#AppName}"; Filename: "{app}\ResourceLens.exe"; WorkingDir: "{app}"; IconFilename: "{app}\ResourceLens.exe"; Comment: "捕获并下载视频、图片和音频"; AppUserModelID: "ResourceLens.Desktop"
-Name: "{group}\{#AppName}"; Filename: "{app}\ResourceLens.exe"; WorkingDir: "{app}"; IconFilename: "{app}\ResourceLens.exe"; AppUserModelID: "ResourceLens.Desktop"
+Name: "{userdesktop}\{#AppName}"; Filename: "{app}\ResourceLens.exe"; WorkingDir: "{app}"; IconFilename: "{app}\ResourceLens.exe"; Comment: "捕获并下载视频、图片和音频"; AppUserModelID: "{#ModelIdentity}"
+Name: "{group}\{#AppName}"; Filename: "{app}\ResourceLens.exe"; WorkingDir: "{app}"; IconFilename: "{app}\ResourceLens.exe"; AppUserModelID: "{#ModelIdentity}"
 Name: "{group}\卸载拾流"; Filename: "{uninstallexe}"
 
 [Run]

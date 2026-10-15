@@ -18,6 +18,7 @@ import (
 
 type localPreview struct {
 	File, Quality, Note string
+	MIME                string
 	Width, Height       int
 	Compatible          bool
 }
@@ -50,6 +51,9 @@ func probePreview(ctx context.Context, tools, file string) (previewProbe, error)
 
 func (e *Engine) prepareLocalPreview(file, mediaType string) (localPreview, error) {
 	result := localPreview{File: file, Quality: "已下载文件", Note: "直接播放原文件。"}
+	if strings.HasPrefix(mediaType, "audio/") {
+		return e.prepareAudioPreview(file)
+	}
 	if !strings.HasPrefix(mediaType, "video/") {
 		return result, nil
 	}
@@ -155,7 +159,7 @@ func (e *Engine) prepareLocalPreview(file, mediaType string) (localPreview, erro
 	return result, nil
 }
 
-var previewCacheName = regexp.MustCompile(`^[a-f0-9]{64}\.mp4$`)
+var previewCacheName = regexp.MustCompile(`^[a-f0-9]{64}\.(mp4|m4a)$`)
 
 // Called with previewMu held. Only generated regular files in the fixed cache
 // directory qualify; symlinks and other files are never removed.

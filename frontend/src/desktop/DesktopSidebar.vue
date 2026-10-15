@@ -1,8 +1,8 @@
 <script setup>
-import {Search, Download, Settings, BookOpen, Network, Copy, ChevronDown} from 'lucide-vue-next';
+import {Search, Download, Settings, BookOpen, Network, Copy, ChevronDown, Music} from 'lucide-vue-next';
 defineProps({page: String, activeJobs: Number, loaded: Boolean, error: String, capture: Boolean, proxy: String, version: String, platform: String});
 const emit = defineEmits(['navigate', 'copy']);
-const navigation = [{id: 'capture', label: '资源捕获', icon: Search}, {id: 'downloads', label: '下载任务', icon: Download}, {id: 'settings', label: '设置', icon: Settings}, {id: 'help', label: '使用帮助', icon: BookOpen}];
+const navigation = [{id: 'capture', label: '资源捕获', icon: Search, shortcut:1}, {id:'music', label:'音乐搜索', icon:Music, shortcut:5}, {id: 'downloads', label: '下载任务', icon: Download, shortcut:2}, {id: 'settings', label: '设置', icon: Settings, shortcut:3}, {id: 'help', label: '使用帮助', icon: BookOpen, shortcut:4}];
 </script>
 
 <template>
@@ -12,7 +12,7 @@ const navigation = [{id: 'capture', label: '资源捕获', icon: Search}, {id: '
       <div><strong>拾流</strong><span>ResourceLens</span></div>
     </div>
     <nav aria-label="主导航">
-      <button v-for="(item,index) in navigation" :key="item.id" :class="{active: page === item.id}" :aria-current="page === item.id ? 'page' : undefined" :title="item.label + ' · ⌘ / Ctrl + ' + (index + 1)" @click="emit('navigate', item.id)">
+      <button v-for="item in navigation" :key="item.id" :class="{active: page === item.id}" :aria-current="page === item.id ? 'page' : undefined" :title="item.label + ' · ⌘ / Ctrl + ' + item.shortcut" @click="emit('navigate', item.id)">
         <component :is="item.icon" :size="20" :stroke-width="1.8"/><span>{{item.label}}</span>
         <span v-if="item.id === 'downloads' && activeJobs" class="nav-count">{{activeJobs}}</span>
       </button>

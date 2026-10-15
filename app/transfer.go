@@ -469,6 +469,24 @@ func (e *Engine) transferDirect(ctx context.Context, client *http.Client, j *Job
 			return err
 		}
 	}
+	if r.Music != nil {
+		tools, toolErr := e.videoTools()
+		if toolErr != nil {
+			return toolErr
+		}
+		e.videoStage(j, "validating", 98)
+		actual, audioErr := validateMusicAudio(ctx, tools, assembly)
+		if audioErr != nil {
+			return audioErr
+		}
+		notice := musicDurationNotice(r.Duration, actual)
+		e.mu.Lock()
+		j.completionNotice = notice
+		if original := e.resources[r.ID]; original != nil && actual > 0 {
+			original.Duration = actual
+		}
+		e.mu.Unlock()
+	}
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}

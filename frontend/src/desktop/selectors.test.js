@@ -36,6 +36,7 @@ test('keyboard shortcuts leave dialogs, IME composition and OS modifier chords a
   assert.equal(shortcutAction(key('n')), 'add');
   assert.equal(shortcutAction(key('F', {ctrlKey: false, metaKey: true})), 'search');
   assert.equal(shortcutAction(key('2')), 'downloads');
+  assert.equal(shortcutAction(key('5')), 'music');
   for (const event of [key('n', {shiftKey: true}), key('n', {altKey: true}), key('n', {isComposing: true}), key('n', {repeat: true}), key('n', {defaultPrevented: true}), key('c'), key('n', {ctrlKey: false})]) assert.equal(shortcutAction(event), '');
   assert.equal(shortcutAction(key('n'), true), '');
 });
