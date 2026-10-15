@@ -264,7 +264,7 @@ func (m *MobileGateway) pair(w http.ResponseWriter, r *http.Request, code string
 	}
 	if m.closed || len(code) != 8 || now.After(m.codeExpires) || subtle.ConstantTimeCompare([]byte(code), []byte(m.code)) != 1 {
 		m.mu.Unlock()
-		mobileJSON(w, nil, errors.New("配对码无效或已过期，请查看 Mac 上的配对码"))
+		mobileJSON(w, nil, errors.New("配对码无效或已过期，请查看电脑上的配对码"))
 		return
 	}
 	for token, s := range m.sessions {
@@ -277,7 +277,7 @@ func (m *MobileGateway) pair(w http.ResponseWriter, r *http.Request, code string
 	}
 	if len(m.sessions) >= 6 {
 		m.mu.Unlock()
-		mobileJSON(w, nil, errors.New("连接设备已达上限，请在 Mac 上停止并重新开启手机连接"))
+		mobileJSON(w, nil, errors.New("连接设备已达上限，请在电脑上停止并重新开启手机连接"))
 		return
 	}
 	token, err := mobileRandomToken()
@@ -304,7 +304,7 @@ func (m *MobileGateway) state() map[string]any {
 			copy[key] = j[key]
 		}
 		if j["error"] != "" {
-			copy["error"] = "下载未完成，请重试或在 Mac 查看详情"
+			copy["error"] = "下载未完成，请重试或在电脑查看详情"
 		}
 		jobs = append(jobs, copy)
 	}
@@ -314,7 +314,7 @@ func (m *MobileGateway) state() map[string]any {
 		for _, item := range b.Items {
 			entry := map[string]any{"status": item.Status, "resourceId": item.ResourceID}
 			if item.Error != "" {
-				entry["error"] = "链接解析失败，可在 Mac 上查看详情"
+				entry["error"] = "链接解析失败，可在电脑上查看详情"
 			}
 			items = append(items, entry)
 		}
@@ -377,7 +377,7 @@ func (m *MobileGateway) serve(w http.ResponseWriter, r *http.Request) {
 	if !m.authorized(r) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(401)
-		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "请先连接 Mac"})
+		json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "请先连接电脑"})
 		return
 	}
 	if strings.HasPrefix(r.URL.Path, "/files/") && (r.Method == "GET" || r.Method == "HEAD") {
@@ -443,7 +443,7 @@ func (m *MobileGateway) serve(w http.ResponseWriter, r *http.Request) {
 	} else if strings.HasPrefix(err.Error(), "DUPLICATE:") {
 		err = errors.New("DUPLICATE: 内容已经下载过，是否重新下载？")
 	} else {
-		err = errors.New("操作未完成，请在 Mac 上查看详情并重试")
+		err = errors.New("操作未完成，请在电脑上查看详情并重试")
 	}
 	mobileJSON(w, result, err)
 }
@@ -462,7 +462,7 @@ func (m *MobileGateway) serveFile(w http.ResponseWriter, r *http.Request, id str
 	m.engine.mu.RUnlock()
 	info, err := os.Lstat(file)
 	if err != nil || !info.Mode().IsRegular() || !pathInside(dir, file) || !ownedDirectory(dir, filepath.Dir(file)) {
-		http.Error(w, "文件不可用，请在 Mac 中检查", 404)
+		http.Error(w, "文件不可用，请在电脑中检查", 404)
 		return
 	}
 	f, err := os.Open(file)
@@ -479,7 +479,7 @@ func (m *MobileGateway) serveFile(w http.ResponseWriter, r *http.Request, id str
 func (m *MobileGateway) servePreview(w http.ResponseWriter, r *http.Request, id, mode string) {
 	data, err := m.engine.createMediaTicket(id, mode)
 	if err != nil {
-		http.Error(w, "预览暂不可用，请在 Mac 上查看详情", 404)
+		http.Error(w, "预览暂不可用，请在电脑上查看详情", 404)
 		return
 	}
 	address, _ := data.(map[string]any)["url"].(string)

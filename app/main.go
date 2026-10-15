@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 
 	"resourcelens/frontend"
@@ -108,7 +109,13 @@ func main() {
 		return
 	}
 	app := &App{engine: engine}
-	err = wails.Run(&options.App{Title: "拾流 · ResourceLens", Width: 1280, Height: 800, MinWidth: 980, MinHeight: 650, BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 0}, Mac: &mac.Options{TitleBar: mac.TitleBarHiddenInset(), Appearance: mac.NSAppearanceNameAqua, WebviewIsTransparent: true, WindowIsTranslucent: true}, AssetServer: &assetserver.Options{Assets: assets}, Bind: []interface{}{app}, OnStartup: func(ctx context.Context) {
+	background := &options.RGBA{R: 233, G: 240, B: 249, A: 255}
+	var macOptions *mac.Options
+	if runtime.GOOS == "darwin" {
+		background = &options.RGBA{R: 255, G: 255, B: 255, A: 0}
+		macOptions = &mac.Options{TitleBar: mac.TitleBarHiddenInset(), Appearance: mac.NSAppearanceNameAqua, WebviewIsTransparent: true, WindowIsTranslucent: true}
+	}
+	err = wails.Run(&options.App{Title: "拾流 · ResourceLens", Width: 1280, Height: 800, MinWidth: 980, MinHeight: 650, BackgroundColour: background, Mac: macOptions, AssetServer: &assetserver.Options{Assets: assets}, Bind: []interface{}{app}, OnStartup: func(ctx context.Context) {
 		app.ctx = ctx
 		quitMu.Lock()
 		requestApplicationQuit = func() { engine.Close(); wruntime.Quit(ctx) }

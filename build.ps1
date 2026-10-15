@@ -25,6 +25,8 @@ $npmExecutable = Join-Path (Split-Path -Parent $NodeExecutable) 'npm.cmd'
 if (-not (Test-Path -LiteralPath $npmExecutable)) { $npmExecutable = (Get-Command npm.cmd -ErrorAction Stop).Source }
 & $npmExecutable ci --prefix frontend --ignore-scripts --no-audit --no-fund
 if ($LASTEXITCODE -ne 0) { throw 'Frontend dependency installation failed' }
+& $npmExecutable test --prefix frontend
+if ($LASTEXITCODE -ne 0) { throw 'Frontend checks failed' }
 & $npmExecutable run build --prefix frontend
 if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed' }
 & $GoExecutable test -tags 'desktop,production' ./app ./frontend
@@ -37,6 +39,17 @@ if (-not (Test-Path -LiteralPath $resourceCompiler)) {
         if ($LASTEXITCODE -ne 0) { throw 'Windows resource compiler installation failed' }
     }
 }
+$versionMatch = [regex]::Match([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'app\features.go')), 'const appVersion = "(\d+\.\d+\.\d+)"')
+if (-not $versionMatch.Success) { throw 'Cannot read application version.' }
+$applicationVersion = $versionMatch.Groups[1].Value
+$resourceFile = Join-Path $PSScriptRoot 'winres\winres.json'
+$resources = Get-Content -LiteralPath $resourceFile -Raw | ConvertFrom-Json
+$resources.RT_MANIFEST.'#1'.'0409'.identity.version = $applicationVersion + '.0'
+$resources.RT_VERSION.'#1'.'0000'.fixed.file_version = $applicationVersion + '.0'
+$resources.RT_VERSION.'#1'.'0000'.fixed.product_version = $applicationVersion + '.0'
+$resources.RT_VERSION.'#1'.'0000'.info.'0409'.FileVersion = $applicationVersion
+$resources.RT_VERSION.'#1'.'0000'.info.'0409'.ProductVersion = $applicationVersion
+[IO.File]::WriteAllText($resourceFile, ($resources | ConvertTo-Json -Depth 20) + "`n", [Text.UTF8Encoding]::new($false))
 & $resourceCompiler make --arch amd64 --out app/rsrc
 if ($LASTEXITCODE -ne 0) { throw 'Windows resources build failed' }
 & $GoExecutable build -tags 'desktop,production' -ldflags '-s -w -H windowsgui' -o $OutputFile ./app

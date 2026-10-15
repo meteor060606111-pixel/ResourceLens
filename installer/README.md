@@ -1,8 +1,8 @@
 # 拾流 Windows 安装程序源码
 
-1.3.0 安装程序已发布，下载 [ResourceLens-1.3.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.3.0/ResourceLens-1.3.0-Setup.exe)。本目录保留手动构建所需源码。
+1.6.0 Windows 安装程序下载：[ResourceLens-1.6.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.0-windows/ResourceLens-1.6.0-Setup.exe)。本目录保留手动构建所需源码。
 
-双击“ResourceLens-1.3.0-Setup.exe”，按简体中文向导选择位置并安装。安装后自动创建当前用户桌面快捷方式“拾流 ResourceLens”、开始菜单快捷方式及卸载入口。本机构建脚本默认输出中文文件名，公开发布文件使用英文文件名。
+双击“ResourceLens-1.6.0-Setup.exe”，按简体中文向导选择位置并安装。安装后自动创建当前用户桌面快捷方式“拾流 ResourceLens”、开始菜单快捷方式及卸载入口。构建脚本自动读取应用版本，并核对 EXE 版本信息，输出统一的英文文件名。
 
 默认优先安装到 D:\ResourceLens；电脑没有 D 盘时安装到当前用户的 LocalAppData\Programs\ResourceLens。可以在向导中更改位置。请选择当前用户可写入的目录，因为捕获信息及下载文件默认保存在程序目录内。
 

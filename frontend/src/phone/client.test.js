@@ -38,13 +38,13 @@ test('cancelling stale reads preserves an accepted download request', async () =
   api.close();
 });
 
-test('an unresponsive Mac times out and releases the request', async () => {
+test('an unresponsive电脑times out and releases the request', async () => {
   let signal;
   const api = createPhoneAPI({timeout: 25, fetcher: (_, options) => new Promise((resolve, reject) => {
     signal = options.signal;
     signal.addEventListener('abort', () => reject(new DOMException('timeout', 'AbortError')), {once: true});
   })});
-  await assert.rejects(api('state'), error => error.kind === 'connection' && /连接不到 Mac/.test(error.message));
+  await assert.rejects(api('state'), error => error.kind === 'connection' && /连接不到电脑/.test(error.message));
   assert.equal(signal.aborted, true);
   api.close();
 });

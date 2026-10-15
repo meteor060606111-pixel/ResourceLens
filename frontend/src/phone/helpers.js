@@ -1,7 +1,7 @@
 export const activeStatus=s=>['queued','resolving','downloading','retrying','merging','validating'].includes(s);
 export function size(v){if(!v||v<0)return '大小待确认';const units=['B','KB','MB','GB','TB'];const i=Math.min(Math.floor(Math.log(v)/Math.log(1024)),4);return (v/1024**i).toFixed(i?1:0)+' '+units[i]}
 export function percent(j){if(j.status==='completed')return 100;return Math.min(activeStatus(j.status)?99:100,Math.max(0,j.percent||(j.total>0?j.done/j.total*100:0)))}
-export function jobLabel(s){return {queued:'等待 Mac 下载',resolving:'Mac 正在解析',downloading:'Mac 正在下载',retrying:'正在重新连接',merging:'Mac 正在合并',validating:'Mac 正在校验',paused:'已暂停',completed:'已完成',cancelled:'已取消',failed:'下载失败'}[s]||s}
+export function jobLabel(s){return {queued:'等待电脑下载',resolving:'电脑正在解析',downloading:'电脑正在下载',retrying:'正在重新连接',merging:'电脑正在合并',validating:'电脑正在校验',paused:'已暂停',completed:'已完成',cancelled:'已取消',failed:'下载失败'}[s]||s}
 export function duration(v){if(!v)return '';const seconds=Math.round(v);return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0')}
 export function inputLinks(text){return [...new Set((text.match(/https?:\/\/[^\s<>"'，。；、（）【】]+/gi)||[]).map(s=>s.replace(/[，。；、！!"'）)\]}]+$/g,'')))]}
 export function pollDelay(state, failures = 0) {

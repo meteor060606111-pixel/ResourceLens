@@ -22,13 +22,13 @@ export function createPhoneAPI({fetcher = globalThis.fetch, timeout = 30000, onU
       });
       if (response.status === 401) {
         onUnauthorized();
-        throw new PhoneAPIError('连接已过期，请重新输入 Mac 上的配对码', 'unauthorized', 401);
+        throw new PhoneAPIError('连接已过期，请重新输入电脑上的配对码', 'unauthorized', 401);
       }
       let json;
       try {json = await response.json();} catch { /* A stopped or changed gateway can return an HTML error. */ }
       if (!response.ok || !json?.ok) {
         const message = response.status === 403
-          ? '连接地址已失效，请在 Mac 设置中重新扫描连接二维码'
+          ? '连接地址已失效，请在电脑设置中重新扫描连接二维码'
           : json?.error || '操作未完成，请重试';
         throw new PhoneAPIError(message, response.status >= 500 || response.status === 403 ? 'connection' : 'request', response.status);
       }
@@ -37,7 +37,7 @@ export function createPhoneAPI({fetcher = globalThis.fetch, timeout = 30000, onU
       if (error instanceof PhoneAPIError) throw error;
       if (controller.signal.aborted && !timedOut) throw new PhoneAPIError('连接检查已取消', 'aborted');
       if (timedOut || error instanceof TypeError) {
-        throw new PhoneAPIError('连接不到 Mac，请确认拾流已开启手机连接，并保持同一 Wi-Fi', 'connection');
+        throw new PhoneAPIError('连接不到电脑，请确认拾流已开启手机连接，并保持同一 Wi-Fi', 'connection');
       }
       throw error;
     } finally {

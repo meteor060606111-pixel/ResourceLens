@@ -1,6 +1,8 @@
 # 拾流 ResourceLens 1.6.0
 
-**Windows 安装版：[下载 ResourceLens-1.3.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.3.0/ResourceLens-1.3.0-Setup.exe)**。双击安装后创建桌面快捷方式，内置下载和视频处理引擎。发布说明及校验文件见 [Releases](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.3.0)。
+**Windows 安装版：[下载 ResourceLens-1.6.0-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.0-windows/ResourceLens-1.6.0-Setup.exe)**。支持 Windows 10/11 x64，双击安装后创建桌面快捷方式，内置下载和视频处理引擎。发布说明及校验文件见 [Windows Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.6.0-windows)。
+
+Windows 已适配 1.6.0 桌面工作台和 iPhone 伴侣页面，使用独立的窗口背景和 Windows 代理、证书、文件定位及进程管理实现。版本信息与安装脚本统一跟随应用版本，手机页面使用通用「电脑」提示。[Windows 检查记录](docs/WINDOWS-1.6.0-CHECK.md)。
 
 ## macOS 版本
 

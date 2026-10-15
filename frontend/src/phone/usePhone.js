@@ -18,7 +18,7 @@ export function usePhone() {
     refreshPromise = null;
   }
   const api = createPhoneAPI({onUnauthorized() {
-    if (!disposed) {clearSession(); toast('连接已过期，请重新输入 Mac 上的配对码', true);}
+    if (!disposed) {clearSession(); toast('连接已过期，请重新输入电脑上的配对码', true);}
   }});
   function toast(text, error = false) {
     if (disposed) return;
@@ -97,7 +97,7 @@ export function usePhone() {
       paired.value = true;
       offline.value = '';
       failures = 0;
-      toast('已连接 Mac');
+      toast('已连接电脑');
     });
   }
   async function disconnect() {

@@ -6,7 +6,10 @@ $ErrorActionPreference = 'Stop'
 $installerProject = Split-Path -Parent $PSScriptRoot
 if (-not (Test-Path -LiteralPath $Compiler -PathType Leaf)) { throw 'Inno Setup 6.7.3 compiler not found; pass -Compiler with the ISCC.exe path.' }
 $installerApp = Get-Item -LiteralPath (Join-Path $installerProject 'ResourceLens.exe')
-if ($installerApp.VersionInfo.ProductVersion -ne '1.3.0') { throw 'Installer script expects ResourceLens 1.3.0.' }
+$versionMatch = [regex]::Match([IO.File]::ReadAllText((Join-Path $installerProject 'app\features.go')), 'const appVersion = "(\d+\.\d+\.\d+)"')
+if (-not $versionMatch.Success) { throw 'Cannot read application version.' }
+$installerVersion = $versionMatch.Groups[1].Value
+if ($installerApp.VersionInfo.ProductVersion -ne $installerVersion) { throw ('Application version does not match source: ' + $installerVersion) }
 foreach ($installerTool in @('ffmpeg.exe','ffprobe.exe','yt-dlp.exe','node.exe')) {
     if (-not (Test-Path -LiteralPath (Join-Path $installerProject ('video-engine\' + $installerTool)) -PathType Leaf)) { throw ('Missing bundled tool: ' + $installerTool) }
 }
@@ -15,12 +18,12 @@ $installerSignature = Get-AuthenticodeSignature -LiteralPath $installerBootstrap
 if ($installerSignature.Status -ne 'Valid' -or $installerSignature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') { throw 'WebView2 bootstrapper must have a valid Microsoft signature.' }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $installerOutput = (Resolve-Path -LiteralPath $OutputDirectory).Path
-& $Compiler ('/DReleaseOutput=' + $installerOutput) (Join-Path $PSScriptRoot 'ResourceLens.iss')
+& $Compiler ('/DAppVersion=' + $installerVersion) ('/DReleaseOutput=' + $installerOutput) (Join-Path $PSScriptRoot 'ResourceLens.iss')
 if ($LASTEXITCODE -ne 0) { throw ('Installer compiler failed: ' + $LASTEXITCODE) }
-$installerExe = Join-Path $installerOutput '拾流-1.3.0-安装程序.exe'
+$installerExe = Join-Path $installerOutput ('ResourceLens-' + $installerVersion + '-Setup.exe')
 if (-not (Test-Path -LiteralPath $installerExe -PathType Leaf)) { throw 'Installer output not found.' }
 $installerManifest = [pscustomobject]@{
-    version='1.3.0'
+    version=$installerVersion
     file=$installerExe
     bytes=(Get-Item -LiteralPath $installerExe).Length
     sha256=(Get-FileHash -LiteralPath $installerExe -Algorithm SHA256).Hash.ToLower()
@@ -30,5 +33,5 @@ $installerManifest = [pscustomobject]@{
     compilerSha256=(Get-FileHash -LiteralPath $Compiler -Algorithm SHA256).Hash.ToLower()
     desktopShortcut='拾流 ResourceLens.lnk'
 }
-$installerManifest | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $installerOutput '安装程序校验-v1.3.0.json') -Encoding utf8
+$installerManifest | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath (Join-Path $installerOutput ('安装程序校验-v' + $installerVersion + '.json')) -Encoding utf8
 $installerManifest | ConvertTo-Json -Depth 3
