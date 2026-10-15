@@ -137,7 +137,7 @@ onUnmounted(()=>{disposed=true;window.removeEventListener('keydown',desktopKeydo
 </script>
 
 <template>
-<div class="app-shell glass-shell" :class="{'native-glass':nativeDesktop&&isMac,'reduce-motion':reducedMotion,'reduce-transparency':reducedTransparency,'in-background':background}" :style="glassStyle" @pointermove="pointerMove" @pointerleave="clearHighlight">
+<div class="app-shell glass-shell" :class="{'native-glass':nativeDesktop&&(isMac||state.platform==='windows'),'native-mac-glass':nativeDesktop&&isMac,'reduce-motion':reducedMotion,'reduce-transparency':reducedTransparency,'in-background':background}" :style="glassStyle" @pointermove="pointerMove" @pointerleave="clearHighlight">
  <a class="skip-link" href="#main-content">跳到主内容</a>
  <DesktopSidebar :page="page" :active-jobs="activeJobs" :loaded="loaded" :error="connectionError" :capture="state.capture" :proxy="state.proxyAddress" :version="state.version" :platform="platformName" :inert="!!modal" @navigate="selectPage" @copy="copy"/>
  <main class="main" :class="{'has-inspector':page==='capture'&&current}" id="main-content" tabindex="-1" :aria-busy="!loaded" :inert="!!modal">
