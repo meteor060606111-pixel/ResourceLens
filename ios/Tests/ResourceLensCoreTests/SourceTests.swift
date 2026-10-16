@@ -43,4 +43,18 @@ final class SourceTests: XCTestCase {
         try Data([0,0,0,24]+Array("ftypisom".utf8)+Array(repeating:0,count:12)).write(to:file)
         XCTAssertNoThrow(try SourceRules.validateFile(file,status:200,mime:"video/mp4",expectedKind:.video))
     }
+
+    func testSystemPathAliasesRemainRelative() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let real = root.appendingPathComponent("real", isDirectory:true)
+        let alias = root.appendingPathComponent("alias", isDirectory:true)
+        try FileManager.default.createDirectory(at:real,withIntermediateDirectories:true)
+        defer {try? FileManager.default.removeItem(at:root)}
+        try FileManager.default.createSymbolicLink(at:alias,withDestinationURL:real)
+        let file = real.appendingPathComponent("offline.movpkg")
+        try Data([1]).write(to:file)
+        XCTAssertEqual(SourceRules.relativePath(of:file,root:alias),"offline.movpkg")
+        XCTAssertEqual(SourceRules.ownedURL(relativePath:"offline.movpkg",root:alias),file.resolvingSymlinksInPath())
+        XCTAssertNil(SourceRules.relativePath(of:root.appendingPathComponent("outside"),root:alias))
+    }
 }

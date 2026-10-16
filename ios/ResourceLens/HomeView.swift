@@ -82,7 +82,7 @@ struct HomeView: View {
                     Text("普通文件可分享至「文件」，兼容的视频和图片可保存到照片。HLS 保存为系统离线视频包，在拾流内播放。")
                     Text("需要登录、平台专用解析或授权的链接可能无法下载。HTML 网页不会被保存成 MP4。")
                 }
-                Section { Text("ResourceLens iPhone 0.1.0 · 原生轻量版").font(.footnote).foregroundStyle(.secondary) }
+                Section { Text("ResourceLens iPhone 0.1.1 · 原生轻量版").font(.footnote).foregroundStyle(.secondary) }
             }.navigationTitle("使用说明").navigationBarTitleDisplayMode(.inline)
                 .toolbar {ToolbarItem(placement:.confirmationAction){Button("完成"){information=false}}}
         }.presentationDetents([.large])

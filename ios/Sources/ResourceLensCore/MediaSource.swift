@@ -94,4 +94,10 @@ public enum SourceRules {
         let base = root.resolvingSymlinksInPath().standardizedFileURL.path + "/"
         return file.path.hasPrefix(base) ? file : nil
     }
+
+    public static func relativePath(of file: URL, root: URL) -> String? {
+        let path = file.resolvingSymlinksInPath().standardizedFileURL.path
+        let prefix = root.resolvingSymlinksInPath().standardizedFileURL.path + "/"
+        return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : nil
+    }
 }

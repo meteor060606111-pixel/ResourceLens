@@ -138,8 +138,7 @@ final class TransferDelegate: NSObject, URLSessionDownloadDelegate, AVAssetDownl
         return url
     }
     private func relative(_ url: URL) -> String? {
-        let path = url.standardizedFileURL.path, prefix = home.standardizedFileURL.path + "/"
-        return path.hasPrefix(prefix) ? String(path.dropFirst(prefix.count)) : nil
+        SourceRules.relativePath(of: url, root: home)
     }
     private func save() {
         do {
