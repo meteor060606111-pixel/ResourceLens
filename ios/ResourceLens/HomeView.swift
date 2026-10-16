@@ -153,7 +153,9 @@ private struct AddDownloadView:View {
         NavigationStack {
             Form {
                 Section("粘贴链接或分享文本") {
-                    TextEditor(text:$text).frame(minHeight:120).accessibilityIdentifier("download-input")
+                    TextEditor(text:$text)
+                        .keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .frame(minHeight:120).accessibilityIdentifier("download-input")
                     PasteButton(payloadType:String.self){strings in text=strings.joined(separator:"\n").prefix(16384).description}.disabled(reading)
                 }
                 Section {
