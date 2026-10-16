@@ -14,7 +14,7 @@ SwiftUI 原生 App，下载在 iPhone 本机执行、文件保存在 iPhone。�
 
 无第三方包依赖，不包含 Flutter、WebView、Python、Node.js、yt-dlp 或 FFmpeg。当前 Release 真机 `.app` 约 1.3 MiB、未签名 IPA 约 0.5 MB，精确字节见 `release/ios.noindex/footprint.json`。
 
-构建对 App 设置 **8 MiB 硬上限**。任务元数据上限 500 项，列表按系统方式复用，进度最多每 0.5 秒更新，任务记录最多每 3 秒随进度保存一次；网页探测最多 1 MiB，读取到媒体响应头即取消探测。播放器仅在预览时创建。文件大小不计入安装包；实际 iPhone 峰值内存仍需真机测量。
+构建对 App 设置 **8 MiB 硬上限**。任务元数据上限 500 项，列表按系统方式复用，进度最多每 0.5 秒更新，任务记录最多每 3 秒随进度保存一次；网页探测最多 1 MiB，读取到媒体响应头即取消探测。播放器仅在预览时创建。文件大小不计入安装包。iPhone 13 / Release 真机静置约 22–26 MiB，本次短视频预览峰值约 65 MiB；测量场景与限制见 [真机验收记录](VALIDATION.md)。
 
 ## 本机与 CI 构建
 
@@ -36,7 +36,7 @@ python3 ios/scripts/package.py \
 
 当前产物是 **未签名开发预览 IPA**，不能直接点击安装，也不是已上架或 TestFlight 构建。打开 `ios/ResourceLens.xcodeproj`，在 Signing & Capabilities 选择自己的 Team、连接解锁并信任的 iPhone，选择 ResourceLensPhone 后运行。首次开发安装与签名需要 Mac / Xcode；安装后实际使用和下载不需要电脑。个人开发签名的有效期及分发范围以 Apple 账号条件为准。
 
-本机当前 iPhone 不可用且没有模拟器运行时，因此本机完成真机架构编译、核心单元测试与同源 Mac Catalyst 预览；真正的 iPhone UI 以 CI 模拟器测试和之后真机验收分别为准。
+已在 iPhone 13 完成开发签名安装、公开 HTTPS 下载、文件字节核对、视频 / 图片预览、图片保存到照片和重新启动后的任务保留。CI 的 iPhone 模拟器 UI 与文件字节核对亦通过，详见 [真机验收记录](VALIDATION.md)。当前本机开发签名有效至 2026-10-23；这不是公开分发证书。
 
 ## 当前能力边界
 
