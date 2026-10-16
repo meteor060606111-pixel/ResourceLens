@@ -29,3 +29,7 @@ __pycache__/
 /music-engine/venv/
 /music-engine/runtime/
 /music-engine/.runtime-build-*/
+/ios/.build/
+/ios/.swiftpm/
+**/xcuserdata/
+*.xcresult/

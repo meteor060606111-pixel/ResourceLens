@@ -1,0 +1,83 @@
+name: Independent iPhone build
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  iphone:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - name: Test parser, file validation and path ownership
+        run: |
+          python3 ios/scripts/fixture-server.py > "$RUNNER_TEMP/ios-fixture-core.log" 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$fixture_pid" || true' EXIT
+          RESOURCELENS_IOS_FIXTURE_PORT=18771 swift test --package-path ios --scratch-path "$RUNNER_TEMP/ios-core"
+      - name: Verify project generation is reproducible
+        run: |
+          python3 ios/scripts/generate-project.py
+          git diff --exit-code -- ios/ResourceLens.xcodeproj
+      - name: Build independent device app and enforce size budget
+        run: |
+          xcodebuild -project ios/ResourceLens.xcodeproj -scheme ResourceLensPhone -configuration Release -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ios-device.noindex" CODE_SIGNING_ALLOWED=NO build
+          python3 ios/scripts/package.py --app "$RUNNER_TEMP/ios-device.noindex/Build/Products/Release-iphoneos/ResourceLensPhone.app" --out release/ios.noindex
+      - name: Test actual iPhone interface and local download
+        run: |
+          python3 ios/scripts/fixture-server.py > "$RUNNER_TEMP/ios-fixture.log" 2>&1 &
+          fixture_pid=$!
+          trap 'kill "$fixture_pid" || true' EXIT
+          device=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for k,v in d["devices"].items() if ".iOS-" in k for x in v if x["isAvailable"] and "iPhone" in x["name"]))')
+          xcodebuild -project ios/ResourceLens.xcodeproj -scheme ResourceLensPhone -configuration Debug -destination "platform=iOS Simulator,id=$device" -derivedDataPath "$RUNNER_TEMP/ios-simulator.noindex" -resultBundlePath "$RUNNER_TEMP/iphone-ui.xcresult" CODE_SIGNING_ALLOWED=NO test
+          container=$(xcrun simctl get_app_container "$device" com.meteor.resourcelens.iphone data)
+          python3 - "$container" <<'PY'
+          import base64,sys
+          from pathlib import Path
+          files=list(Path(sys.argv[1]).glob('Documents/UITesting/Downloads/*/sample.png'))
+          expected=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aJz8AAAAASUVORK5CYII=')
+          assert len(files)==1 and files[0].read_bytes()==expected, 'Saved file differs from the origin'
+          print('Native iPhone file transfer matched the origin bytes')
+          PY
+      - name: Upload unsigned preview
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ResourceLens-iPhone-unsigned
+          path: release/ios.noindex/*
+          if-no-files-found: error
+      - name: Upload simulator UI evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ResourceLens-iPhone-UI
+          path: ${{ runner.temp }}/iphone-ui.xcresult
+          if-no-files-found: warn
+  preview-release:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [iphone]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: ResourceLens-iPhone-unsigned
+          path: iphone-preview
+      - name: Publish clearly labeled unsigned iPhone preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open("iphone-preview/footprint.json"))["version"])')
+          tag="v${version}-ios"
+          if gh release view "$tag" >/dev/null 2>&1; then exit 0; fi
+          gh release create "$tag" iphone-preview/*.ipa iphone-preview/*.sha256 iphone-preview/footprint.json --target "$GITHUB_SHA" --prerelease --latest=false --title "拾流 iPhone ${version} · 独立版未签名预览" --notes-file ios/RELEASE.md
