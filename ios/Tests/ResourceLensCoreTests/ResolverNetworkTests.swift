@@ -12,6 +12,9 @@ final class ResolverNetworkTests: XCTestCase {
         XCTAssertEqual(file.first?.kind,.file);XCTAssertEqual(file.first?.size,8*1024*1024)
         let page=try await resolver.resolve(base.appendingPathComponent("page"))
         XCTAssertEqual(page.first?.url,base.appendingPathComponent("sample.png"));XCTAssertEqual(page.first?.kind,.image)
+        let player=try await resolver.resolve(base.appendingPathComponent("player-page"))
+        XCTAssertEqual(player.count,1);XCTAssertEqual(player.first?.kind,.image)
+        XCTAssertTrue(player.first?.title.hasPrefix("网页封面") == true)
         do {_ = try await resolver.resolve(base.appendingPathComponent("not-a-video.mp4"));XCTFail("HTML was accepted as video")}catch {XCTAssertTrue(error is SourceError)}
         do {_ = try await resolver.resolve(base.appendingPathComponent("live.m3u8"));XCTFail("Live stream was accepted")}catch {XCTAssertTrue(error is SourceError)}
     }

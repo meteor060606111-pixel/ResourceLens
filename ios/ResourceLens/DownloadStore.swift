@@ -3,13 +3,13 @@ import AVFoundation
 import UniformTypeIdentifiers
 
 enum DownloadStatus: String, Codable {
-    case queued, downloading, pausing, paused, completed, failed
-    var label: String { switch self { case .queued: return "排队中"; case .downloading: return "正在下载"; case .pausing: return "正在保留进度"; case .paused: return "已暂停"; case .completed: return "已保存到 iPhone"; case .failed: return "未完成" } }
+    case queued, resolving, downloading, pausing, paused, completed, failed
+    var label: String { switch self { case .queued: return "排队中"; case .resolving: return "正在重新识别视频"; case .downloading: return "正在下载"; case .pausing: return "正在保留进度"; case .paused: return "已暂停"; case .completed: return "已保存到 iPhone"; case .failed: return "未完成" } }
 }
 
 struct DownloadRecord: Identifiable, Codable {
     var id = UUID()
-    let source: MediaSource
+    var source: MediaSource
     var status = DownloadStatus.queued
     var created = Date()
     var received: Int64 = 0
@@ -90,6 +90,7 @@ final class TransferDelegate: NSObject, URLSessionDownloadDelegate, AVAssetDownl
     private var session: URLSession!
     private var assets: AVAssetDownloadURLSession?
     private var tasks: [UUID: URLSessionTask] = [:]
+    private var resolving: [UUID: Task<Void,Never>] = [:]
     private var handlers: [String: () -> Void] = [:]
     private var lastProgress: [UUID: Date] = [:]
     private var lastSave = Date.distantPast
@@ -157,13 +158,13 @@ final class TransferDelegate: NSObject, URLSessionDownloadDelegate, AVAssetDownl
         }
         for index in records.indices where tasks[records[index].id] == nil {
             records[index].taskID = nil
-            if [.downloading, .pausing].contains(records[index].status) { records[index].status = .paused; records[index].note = "上次下载已停止，点继续恢复" }
+            if [.resolving, .downloading, .pausing].contains(records[index].status) { records[index].status = .paused; records[index].note = "上次下载已停止，点继续恢复" }
         }
         save(); pump()
     }
     func enqueue(_ source: MediaSource) {
         guard records.count < SourceRules.recordLimit else { message = "任务记录已达 500 项，请先删除不需要的任务"; return }
-        if records.contains(where: { $0.source.url == source.url && [.queued, .downloading, .pausing, .paused].contains($0.status) }) { message = "此链接已有任务，请继续原任务"; return }
+        if records.contains(where: { ($0.source.url == source.url || source.originURL != nil && $0.source.originURL == source.originURL) && [.queued, .resolving, .downloading, .pausing, .paused].contains($0.status) }) { message = "此链接已有任务，请继续原任务"; return }
         records.insert(DownloadRecord(source: source, expected: source.size), at: 0)
         save(); pump()
     }
@@ -180,7 +181,7 @@ final class TransferDelegate: NSObject, URLSessionDownloadDelegate, AVAssetDownl
                     task = assetTask
                 } else if let size = try? resumeURL(record.id).resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 4*1024*1024, let data = try? Data(contentsOf: resumeURL(record.id)) {
                     task = session.downloadTask(withResumeData: data)
-                } else { task = session.downloadTask(with: record.source.url) }
+                } else { task = session.downloadTask(with: record.source.downloadRequest) }
                 task.taskDescription = record.id.uuidString
                 tasks[record.id] = task; records[index].taskID = task.taskIdentifier
                 records[index].status = .downloading; records[index].note = ""
@@ -190,7 +191,10 @@ final class TransferDelegate: NSObject, URLSessionDownloadDelegate, AVAssetDownl
         save()
     }
     func pause(_ id: UUID) {
-        guard let index = records.firstIndex(where: { $0.id == id }), [.queued, .downloading].contains(records[index].status) else { return }
+        guard let index = records.firstIndex(where: { $0.id == id }), [.queued, .resolving, .downloading].contains(records[index].status) else { return }
+        if records[index].status == .resolving {
+            resolving.removeValue(forKey:id)?.cancel(); records[index].status = .paused; save(); return
+        }
         if let task = tasks[id] as? URLSessionDownloadTask {
             records[index].status = .pausing; save()
             task.cancel { [weak self] data in Task { @MainActor in
@@ -204,11 +208,34 @@ final class TransferDelegate: NSObject, URLSessionDownloadDelegate, AVAssetDownl
     }
     func resume(_ id: UUID) {
         guard let index = records.firstIndex(where: { $0.id == id }), [.paused, .failed].contains(records[index].status) else { return }
+        let source=records[index].source
+        if BilibiliLink.isPlatformURL(source.url) || source.originURL != nil && records[index].status == .failed {
+            guard resolving.count < 2 else {message="正在识别其他视频，请稍后再试";return}
+            records[index].status = .resolving; records[index].note=""; save()
+            resolving[id]=Task { [weak self] in
+                guard let self else {return}
+                do {
+                    let results=try await MediaResolver(allowLocalHTTP:self.testing).resolve(source.originURL ?? source.url)
+                    guard !Task.isCancelled, let current=self.records.firstIndex(where:{$0.id == id}), self.records[current].status == .resolving else {return}
+                    guard let refreshed=results.first(where:{$0.kind == .video}) else {throw SourceError("来源未提供可下载的视频")}
+                    // Signed CDN links expire. Resume data for the previous URL must not be reused.
+                    try? FileManager.default.removeItem(at:self.resumeURL(id))
+                    self.records[current].source=refreshed; self.records[current].received=0;self.records[current].expected=refreshed.size
+                    self.records[current].fraction=0;self.records[current].status = .queued
+                    self.resolving.removeValue(forKey:id);self.save();self.pump()
+                } catch {
+                    guard !Task.isCancelled, let current=self.records.firstIndex(where:{$0.id == id}), self.records[current].status == .resolving else {return}
+                    self.records[current].status = .failed;self.records[current].note=error.localizedDescription
+                    self.resolving.removeValue(forKey:id);self.save()
+                }
+            }
+            return
+        }
         records[index].status = .queued; save(); pump()
     }
     func remove(_ id: UUID) {
         guard let record = records.first(where: { $0.id == id }) else { return }
-        records.removeAll { $0.id == id }; tasks.removeValue(forKey: id)?.cancel(); lastProgress.removeValue(forKey: id)
+        records.removeAll { $0.id == id }; tasks.removeValue(forKey: id)?.cancel(); resolving.removeValue(forKey:id)?.cancel(); lastProgress.removeValue(forKey: id)
         if let file = localURL(record) { try? FileManager.default.removeItem(at: file) }
         let folder = documents.appendingPathComponent("Downloads/" + id.uuidString)
         if (try? FileManager.default.contentsOfDirectory(atPath:folder.path).isEmpty) == true {try? FileManager.default.removeItem(at:folder)}
@@ -234,7 +261,14 @@ final class TransferDelegate: NSObject, URLSessionDownloadDelegate, AVAssetDownl
             records[index].fraction = fraction ?? (expected > 0 ? min(0.99, Double(received)/Double(expected)) : 0)
             if Date().timeIntervalSince(lastSave) >= 3 { save() }
         case .file(_, _, let file, let count):
-            records[index].localPath = relative(file); records[index].received = count; records[index].expected = count
+            var saved=file
+            if records[index].source.originURL != nil {
+                let named=file.deletingLastPathComponent().appendingPathComponent(SourceRules.fileName(records[index].source.title))
+                if named != file {
+                    do {try FileManager.default.moveItem(at:file,to:named);saved=named} catch { /* Retain the verified file under its original name. */ }
+                }
+            }
+            records[index].localPath = relative(saved); records[index].received = count; records[index].expected = count
             records[index].fraction = 1; records[index].status = .completed; records[index].taskID = nil
             tasks.removeValue(forKey: id); try? FileManager.default.removeItem(at: resumeURL(id)); save(); pump()
         case .hlsLocation(_, _, let file):

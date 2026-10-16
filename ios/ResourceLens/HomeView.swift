@@ -75,14 +75,14 @@ struct HomeView: View {
                 Section("独立 iPhone 版") {
                     Label("文件直接保存到这台 iPhone",systemImage:"iphone")
                     Label("使用时不需要电脑或配对码",systemImage:"checkmark.circle")
-                    Text("支持 HTTPS 视频、图片、文件直链，以及网页中公开的媒体地址。音乐搜索和音乐下载未加入手机版。")
+                    Text("支持 B站公开视频（BV / av / b23.tv 分享链接）、HTTPS 视频、图片与文件直链，以及网页中公开的媒体地址。手机端没有音乐模块。")
                 }
                 Section("下载与保存") {
                     Text("系统后台下载会保留任务。主动从多任务界面划掉拾流后，系统会停止后台传输；再次打开后可继续。")
                     Text("普通文件可分享至「文件」，兼容的视频和图片可保存到照片。HLS 保存为系统离线视频包，在拾流内播放。")
-                    Text("需要登录、平台专用解析或授权的链接可能无法下载。HTML 网页不会被保存成 MP4。")
+                    Text("B站以来源实际提供的完整 MP4 画质保存，通常最高 720p；登录、付费、DASH 与多段视频暂不支持。HTML 播放器网页不会被当成视频。")
                 }
-                Section { Text("ResourceLens iPhone 0.1.1 · 原生轻量版").font(.footnote).foregroundStyle(.secondary) }
+                Section { Text("ResourceLens iPhone 0.1.2 · 原生轻量版").font(.footnote).foregroundStyle(.secondary) }
             }.navigationTitle("使用说明").navigationBarTitleDisplayMode(.inline)
                 .toolbar {ToolbarItem(placement:.confirmationAction){Button("完成"){information=false}}}
         }.presentationDetents([.large])
@@ -113,7 +113,7 @@ private struct DownloadCard: View {
                 Image(systemName:record.source.kind.symbol).font(.title3).foregroundStyle(.tint).frame(width:44,height:48).background(.tint.opacity(0.08),in:RoundedRectangle(cornerRadius:12))
                 VStack(alignment:.leading,spacing:6) {
                     Text(record.source.title).font(.headline).lineLimit(2).textSelection(.enabled)
-                    Text(record.source.url.host ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(record.source.originURL?.host ?? record.source.url.host ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     Text(record.status.label).font(.caption.weight(.medium)).foregroundStyle(record.status == .completed ? Color.teal : .secondary)
                 }
                 Spacer(minLength:0)
@@ -122,10 +122,11 @@ private struct DownloadCard: View {
             if record.status == .downloading || record.status == .paused || record.status == .pausing {
                 if record.expected > 0 || record.source.kind == .hls {ProgressView(value:record.fraction)} else {ProgressView()}
             }
+            if record.status == .resolving {ProgressView()}
             if record.expected>0 {Text(ByteCountFormatter.string(fromByteCount:record.received,countStyle:.file)+" / "+ByteCountFormatter.string(fromByteCount:record.expected,countStyle:.file)).font(.caption).foregroundStyle(.secondary)}
             HStack {
                 Spacer()
-                if record.status == .downloading || record.status == .queued {Button("暂停",action:pause).buttonStyle(.bordered)}
+                if [.resolving,.downloading,.queued].contains(record.status) {Button("暂停",action:pause).buttonStyle(.bordered)}
                 if record.status == .paused || record.status == .failed {Button(record.status == .failed ? "重试":"继续",action:resume).buttonStyle(.borderedProminent)}
                 if record.status == .completed, let local {
                     Button(record.source.kind == .hls || record.source.kind == .video ? "播放":"预览",action:preview).buttonStyle(.bordered)
@@ -158,12 +159,12 @@ private struct AddDownloadView:View {
                 Section {
                     Button {read()} label:{HStack {if reading{ProgressView()};Text(reading ? "正在读取媒体…":"识别并下载").frame(maxWidth:.infinity)}}
                         .disabled(reading||text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty)
-                    Text("支持 HTTPS 视频、图片、文件直链，以及包含公开媒体地址的网页。文件保存在 iPhone。").font(.footnote).foregroundStyle(.secondary)
+                    Text("支持 B站 BV / av / b23.tv 分享链接，以及 HTTPS 视频、图片和文件直链。视频直接保存在 iPhone。").font(.footnote).foregroundStyle(.secondary)
                     if !error.isEmpty {Text(error).font(.footnote).foregroundStyle(.red).accessibilityIdentifier("source-error")}
                 }
                 if !candidates.isEmpty {
                     Section("选择要保存的内容") {
-                        ForEach(candidates){source in Button {store.enqueue(source);dismiss()} label:{VStack(alignment:.leading,spacing:5){Text(source.title).lineLimit(2);Text(source.kind.label).font(.caption).foregroundStyle(.secondary)}}}
+                        ForEach(candidates){source in Button {store.enqueue(source);dismiss()} label:{VStack(alignment:.leading,spacing:5){Text(source.title).lineLimit(2);Text([source.kind.label,source.quality,source.size > 0 ? ByteCountFormatter.string(fromByteCount:source.size,countStyle:.file):nil].compactMap{$0}.joined(separator:" · ")).font(.caption).foregroundStyle(.secondary)}}}
                     }
                 }
             }.navigationTitle("新建下载").navigationBarTitleDisplayMode(.inline)
@@ -178,7 +179,7 @@ private struct AddDownloadView:View {
                 let url=try SourceRules.inputURL(text)
                 let results=try await MediaResolver(allowLocalHTTP:store.testing).resolve(url)
                 guard !Task.isCancelled else {return}
-                if results.count == 1, results[0].url == url, (try? SourceRules.kind(url:url)) != nil {store.enqueue(results[0]);dismiss()} else {candidates=results}
+                if results.count == 1, results[0].originURL != nil || results[0].url == url && (try? SourceRules.kind(url:url)) != nil {store.enqueue(results[0]);dismiss()} else {candidates=results}
             }catch{if !Task.isCancelled{self.error=error.localizedDescription}}
         }
     }

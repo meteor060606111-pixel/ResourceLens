@@ -7,6 +7,9 @@ import base64, hashlib, os, time
 PNG=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aJz8AAAAASUVORK5CYII=')
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path=='/player-page':
+            data=b'<html><meta property="og:video" content="https://player.bilibili.com/player.html?bvid=BV1xx411c7mD"><meta property="og:image" content="/sample.png"></html>'
+            self.send_response(200);self.send_header('Content-Type','text/html');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return
         if self.path in ['/page','/live.m3u8']:
             data=b'<html><video src="/sample.png"></video></html>' if self.path=='/page' else b'#EXTM3U\n#EXTINF:10,\nsegment.ts\n'
             self.send_response(200);self.send_header('Content-Type','text/html' if self.path=='/page' else 'application/vnd.apple.mpegurl');self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data);return

@@ -14,6 +14,12 @@ public final class MediaResolver: @unchecked Sendable {
     deinit { session.invalidateAndCancel() }
 
     public func resolve(_ url: URL) async throws -> [MediaSource] {
+        if BilibiliLink.isPlatformURL(url) {
+            var secure=url
+            if url.scheme == "http", var parts=URLComponents(url:url,resolvingAgainstBaseURL:false) { parts.scheme="https";secure=parts.url ?? url }
+            try SourceRules.validate(secure)
+            return try await BilibiliClient.resolve(secure,session:session)
+        }
         try SourceRules.validate(url, allowLocalHTTP: allowLocalHTTP)
         _ = try SourceRules.kind(url: url)
         var request = URLRequest(url: url)
@@ -74,8 +80,10 @@ public final class MediaResolver: @unchecked Sendable {
                   seen.insert(url.absoluteString).inserted else { continue }
             let type: MediaKind?
             do { type = try SourceRules.kind(url: url) } catch { continue }
+            if hint == .video, ["html","htm"].contains(url.pathExtension.lowercased()) { continue }
             let kind = type == .file ? hint : type ?? hint
-            result.append(MediaSource(url: url, title: SourceRules.fileName(url.lastPathComponent), kind: kind))
+            let title=(hint == .image ? "网页封面 · " : "")+SourceRules.fileName(url.lastPathComponent)
+            result.append(MediaSource(url: url, title: title, kind: kind))
             if result.count == 20 { break }
         }
         return result

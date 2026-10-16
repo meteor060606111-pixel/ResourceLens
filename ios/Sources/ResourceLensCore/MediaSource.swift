@@ -12,8 +12,19 @@ public struct MediaSource: Identifiable, Codable, Hashable, Sendable {
     public let title: String
     public let kind: MediaKind
     public let size: Int64
-    public init(url: URL, title: String, kind: MediaKind, size: Int64 = 0) {
+    public let originURL: URL?
+    public let quality: String?
+    public init(url: URL, title: String, kind: MediaKind, size: Int64 = 0, originURL: URL? = nil, quality: String? = nil) {
         self.url = url; self.title = title; self.kind = kind; self.size = size
+        self.originURL = originURL; self.quality = quality
+    }
+    public var downloadRequest: URLRequest {
+        var request = URLRequest(url: url)
+        if let originURL, BilibiliLink.isPlatformURL(originURL), BilibiliLink.isMediaURL(url) {
+            request.setValue(originURL.absoluteString, forHTTPHeaderField: "Referer")
+            request.setValue(BilibiliClient.userAgent, forHTTPHeaderField: "User-Agent")
+        }
+        return request
     }
 }
 
@@ -65,7 +76,12 @@ public enum SourceRules {
     public static func fileName(_ proposed: String, fallback: String = "下载文件") -> String {
         let leaf = proposed.replacingOccurrences(of: "\\", with: "/").split(separator: "/").last.map(String.init) ?? ""
         let safe = leaf.components(separatedBy: .controlCharacters.union(CharacterSet(charactersIn: ":?*<>|\""))).joined(separator: "_").trimmingCharacters(in: .whitespacesAndNewlines)
-        let result = String(safe.prefix(160))
+        let ext = (safe as NSString).pathExtension
+        let suffix = !ext.isEmpty && ext.utf8.count <= 16 ? "." + ext : ""
+        let stem = suffix.isEmpty ? safe : String(safe.dropLast(suffix.count))
+        var shortened = String(stem.prefix(max(1, 160-suffix.count)))
+        while shortened.utf8.count + suffix.utf8.count > 220 { shortened.removeLast() }
+        let result = shortened + suffix
         return result.isEmpty || result == "." || result == ".." ? fallback : result
     }
 

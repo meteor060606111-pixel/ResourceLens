@@ -1,10 +1,11 @@
-# 拾流 · 独立 iPhone 版 0.1.1
+# 拾流 · 独立 iPhone 版 0.1.2
 
 SwiftUI 原生 App，下载在 iPhone 本机执行、文件保存在 iPhone。使用时不连接 Mac，不扫描配对码，也不需要运行电脑上的拾流。**手机端没有音乐搜索、歌单、音乐下载或音乐运行时。** 桌面 1.8.0 继续独立维护。
 
 ## 已实现
 
-- 粘贴视频、图片、文件直链或分享文本。读取公开网页里的 video / source / Open Graph / JSON-LD 媒体地址；网页结果先展示类型并由用户选择保存。
+- B站公开 BV / av 视频、播放器链接及 b23.tv 分享链接，读取来源实际提供的完整 MP4，通常为 720p；失败任务点击重试会刷新解析与过期链接。保留来源请求头，视频包含正常声音，不需要 FFmpeg。
+- 粘贴视频、图片、文件直链或分享文本。读取公开网页里的 video / source / Open Graph / JSON-LD 媒体地址；网页结果先展示类型并由用户选择保存，Open Graph 封面明确标注为“网页封面”，HTML 播放器不会列为视频。
 - HTTPS 普通文件使用系统 URLSession 后台下载，最多同时两个任务。暂停时保存来源提供的续传数据；不支持续传的来源会提示重新开始。系统进程负责传输，媒体不整体加载为 Data。
 - HLS 使用 AVAssetDownloadURLSession 保存在系统离线视频包中，由 AVPlayer 播放。普通 MP4、图片与文件可分享至「文件」，兼容的视频和图片可通过仅添加照片权限保存到相册。
 - 原生任务列表、全局搜索、已保存筛选、本地图片 / 文件预览、视频播放、删除任务和对应文件。预览关闭后释放播放器。
@@ -12,9 +13,9 @@ SwiftUI 原生 App，下载在 iPhone 本机执行、文件保存在 iPhone。�
 
 ## 轻量约束
 
-无第三方包依赖，不包含 Flutter、WebView、Python、Node.js、yt-dlp 或 FFmpeg。当前 Release 真机 `.app` 约 1.3 MiB、未签名 IPA 约 0.5 MB，精确字节见 `release/ios.noindex/footprint.json`。
+无第三方包依赖，不包含 Flutter、WebView、Python、Node.js、yt-dlp 或 FFmpeg。本地 Release 未签名 `.app` 约 1.38 MiB、未签名 IPA 约 0.53 MB，精确字节见 `release/ios.noindex/footprint.json`。
 
-构建对 App 设置 **8 MiB 硬上限**。任务元数据上限 500 项，列表按系统方式复用，进度最多每 0.5 秒更新，任务记录最多每 3 秒随进度保存一次；网页探测最多 1 MiB，读取到媒体响应头即取消探测。播放器仅在预览时创建。文件大小不计入安装包。iPhone 13 / Release 真机静置约 22–26 MiB，本次短视频预览峰值约 65 MiB；测量场景与限制见 [真机验收记录](VALIDATION.md)。
+构建对 App 设置 **8 MiB 硬上限**。任务元数据上限 500 项，列表按系统方式复用，进度最多每 0.5 秒更新，任务记录最多每 3 秒随进度保存一次；网页探测最多 1 MiB，读取到媒体响应头即取消探测。播放器仅在预览时创建。文件大小不计入安装包。前版 0.1.1 的 iPhone 13 / Release 真机静置约 22–26 MiB、短视频预览峰值约 65 MiB，见 [验收记录](VALIDATION.md)；0.1.2 的 B站实际下载与内存验收将单独补充。
 
 ## 本机与 CI 构建
 
@@ -40,9 +41,11 @@ python3 ios/scripts/package.py \
 
 ## 当前能力边界
 
-- 首版没有把桌面的 B 站、抖音等专用解析器搬进来。只有平台实际暴露可直接读取的媒体地址时才能保存；登录、加密播放和动态脚本内的媒体不保证支持。
+- B站仅支持无需登录且来源返回完整 MP4 的公开视频，画质以实际返回为准。付费、受保护内容、DASH 与多段视频不会被当成完整视频保存；抖音等其他平台的专用解析尚未加入。
 - HLS 保存为系统离线包，并不转换成 MP4，也不能直接保存到照片。HLS 真机后台行为仍待验收；直播不在首版承诺范围内。
 - 后台传输受 iOS 调度影响。用户从多任务界面主动划掉 App 后，系统会停止后台传输；重新打开后可恢复任务。不能承诺锁屏后无限运行。
 - 相册权限仅在用户点击保存时申请；未申请读取整个照片图库的权限。
 
 实现参考 Apple 的 [后台下载](https://developer.apple.com/documentation/foundation/downloading-files-in-the-background)、[HLS 离线存储](https://developer.apple.com/documentation/avfoundation/offline-playback-and-storage) 与 [HLS 文件位置规则](https://developer.apple.com/documentation/avfoundation/avassetdownloaddelegate/urlsession(_:assetdownloadtask:didfinishdownloadingto:))。下载逻辑为本项目新写的 Swift 代码，没有复制 Gopeed 的 GPL 引擎。
+
+B站部分参考 [yt-dlp 的提取器源码](https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/bilibili.py) 的响应结构并直接验证公开接口；Swift 解析与下载代码由本项目实现，未引入 Python 或整个提取引擎。
