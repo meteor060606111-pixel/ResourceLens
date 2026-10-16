@@ -37,7 +37,7 @@ func (e *Engine) saveSession() {
 		}
 	}
 	for _, j := range e.jobs {
-		saved.Jobs = append(saved.Jobs, storedJob{Job: Job{ID: j.ID, ResourceID: j.ResourceID, Name: j.Name, URL: j.URL, Status: j.Status, Total: j.Total, File: j.File, Error: j.Error, CreatedAt: j.CreatedAt, Percent: j.Percent, Notice: j.Notice, ResumeAvailable: j.ResumeAvailable, Quality: j.Quality, RequestedQuality: j.RequestedQuality, OutputDir: j.OutputDir}, Done: j.done.Load()})
+		saved.Jobs = append(saved.Jobs, storedJob{Job: Job{ID: j.ID, ResourceID: j.ResourceID, Name: j.Name, URL: j.URL, Status: j.Status, Total: j.Total, File: j.File, Error: j.Error, CreatedAt: j.CreatedAt, Percent: j.Percent, Notice: j.Notice, ResumeAvailable: j.ResumeAvailable, Quality: j.Quality, RequestedQuality: j.RequestedQuality, OutputDir: j.OutputDir, Priority: j.Priority, ScheduledAt: j.ScheduledAt}, Done: j.done.Load()})
 	}
 	e.mu.RUnlock()
 	b, err := json.Marshal(saved)

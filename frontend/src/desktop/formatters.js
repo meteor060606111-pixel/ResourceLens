@@ -15,6 +15,7 @@ export function percent(job) {
 }
 
 export function jobLabel(job) {
+  if (job.status === 'queued' && Date.parse(job.scheduledAt) > Date.now()) return '等待预约';
   return {queued: '等待下载', resolving: '解析视频', downloading: '下载中', retrying: '重新连接', merging: '合并音视频', validating: '校验文件', paused: '已暂停', completed: '已完成', cancelled: '已取消', failed: '下载失败'}[job.status] || job.status;
 }
 

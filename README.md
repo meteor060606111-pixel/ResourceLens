@@ -1,6 +1,10 @@
-# 拾流 ResourceLens 1.6.4
+# 拾流 ResourceLens 1.7.2
 
-1.6.3 集成「音乐搜索 / 导入歌单」：按歌名或歌手搜索，或粘贴公开歌单链接，试听后单首或批量下载，保存音源附带的 `.lrc` 歌词。下载完成前验证音轨和解码，短音源提示可能为试听片段；不兼容格式使用独立播放缓存。Windows 1.6.3 和 macOS 1.6.4 安装包均内置可移动 Python/musicdl 2.14.1，安装后无需另装 Python。平台选择框与搜索栏统一玻璃样式，支持小窗口和键盘操作。音乐引擎按上游 PolyForm Noncommercial 1.0.0 单独授权，适用于个人非商业用途，详见 [音乐引擎说明](music-engine/README.md)。
+1.7.2 合并重复运行时并裁剪开发文件与符号，Apple 芯片安装包约 225.7 MiB，比精简前减少约 34%；保留 57 个平台注册和 24 个歌单实现。新增下载队列优先级、预约开始、暂停后续队列和每任务限速；HTTP 多段下载共享限额。Mac 默认从本项目 GitHub 检查新版，点击安装后在 Applications 原位替换，验证失败恢复原应用，成功后清理旧程序和暂存包并重新打开。现有下载与配置保留。
+
+本轮已取消浏览器扩展；手机先做架构调研。Gopeed 原生 iPhone / Android 和 AB Android 在手机本地下载，拾流现有 iPhone 网页端连接 Mac 下载，再从 Mac 预览或取回文件。源码调用链和固定版本见 [开源研究与重构记录](docs/OPEN_SOURCE_RESEARCH.md)。
+
+1.6.3 集成「音乐搜索 / 导入歌单」：按歌名或歌手搜索，或粘贴公开歌单链接，试听后单首或批量下载，保存音源附带的 `.lrc` 歌词。下载完成前验证音轨和解码，短音源提示可能为试听片段；不兼容格式使用独立播放缓存。Windows 1.6.3 和 macOS 1.7.2 安装包均内置可移动 Python/musicdl 2.14.1，安装后无需另装 Python。平台选择框与搜索栏统一玻璃样式，支持小窗口和键盘操作。音乐引擎按上游 PolyForm Noncommercial 1.0.0 单独授权，适用于个人非商业用途，详见 [音乐引擎说明](music-engine/README.md)。
 
 **Windows 安装版：[下载 ResourceLens-1.6.3-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.3-windows/ResourceLens-1.6.3-Setup.exe)**。支持 Windows 10/11 x64，双击安装后创建桌面快捷方式，内置下载、视频处理和音乐引擎。发布说明及校验文件见 [Windows Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.6.3-windows)。
 
@@ -8,9 +12,9 @@ Windows 已适配 1.6.0 玻璃桌面工作台和 iPhone 伴侣页面。Windows 1
 
 ## macOS 版本
 
-**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.4-macos/ResourceLens-1.6.4-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.4-macos/ResourceLens-1.6.4-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.6.4-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
+**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.7.2-macos/ResourceLens-1.7.2-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.7.2-macos/ResourceLens-1.7.2-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.7.2-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
 
-1.6.4 完整音乐版需要 macOS 14 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎和音乐引擎均内置，可直接使用音乐搜索、公开歌单导入、试听、歌词保存和兼容音频预览。支持从顶部透明区域、标题或品牌区域拖动窗口，按钮和输入框仍正常操作。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
+1.7.2 完整音乐版需要 macOS 14 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎和音乐引擎均内置，可直接使用音乐搜索、公开歌单导入、试听、歌词保存和兼容音频预览。顶部透明标题栏使用原生 macOS 拖动，按钮和输入框仍正常操作。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
 
 默认下载目录为 `~/Downloads/ResourceLens`，配置、日志、证书与任务保存在 `~/Library/Application Support/ResourceLens/data`。首次捕获需要 macOS 网络设置及钥匙串授权；停止捕获或正常退出恢复原代理。更新使用 DMG 拖拽替换应用，保留本机数据。
 

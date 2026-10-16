@@ -549,13 +549,20 @@ func (e *Engine) transferChunk(ctx context.Context, client *http.Client, j *Job,
 	if htmlMIME(resp.Header.Get("Content-Type")) {
 		return errors.New("服务器返回网页或登录提示")
 	}
-	buf := make([]byte, 128*1024)
+	bufferSize := 128 * 1024
+	if j.limiter != nil && j.limiter.bytesPerSecond > 0 {
+		bufferSize = 16 * 1024
+	}
+	buf := make([]byte, bufferSize)
 	var received int64
 	for {
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
 			if m.Ranged && offset+received+int64(n) > expected {
 				return errors.New("分段长度超出请求范围")
+			}
+			if err := j.limiter.wait(ctx, n); err != nil {
+				return err
 			}
 			written, writeErr := f.Write(buf[:n])
 			received += int64(written)

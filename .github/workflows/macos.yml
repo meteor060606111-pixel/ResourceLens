@@ -53,8 +53,8 @@ jobs:
         with:
           name: macos-${{ matrix.arch }}
           path: |
-            release/macos-${{ matrix.arch }}/*.dmg
-            release/macos-${{ matrix.arch }}/*.sha256
+            release/macos-${{ matrix.arch }}.noindex/*.dmg
+            release/macos-${{ matrix.arch }}.noindex/*.sha256
           if-no-files-found: error
 
   windows-compatibility:

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {sortResources, matchesQuery, filterJobs, normalizedSettings, shortcutAction} from './selectors.js';
+import {sortResources, matchesQuery, filterJobs, normalizedSettings, shortcutAction, sortDownloadQueue} from './selectors.js';
 import {percent, size} from './formatters.js';
 
 test('sorting keeps backend records immutable and gives stable order after a poll', () => {
@@ -49,4 +49,19 @@ test('transfer values never claim completion before validation or format invalid
   assert.equal(size(NaN), '未知');
   assert.equal(size('0'), '0 B');
   assert.equal(size(1048576), '1.0 MB');
+});
+
+test('download queue order matches non-preemptive priority and keeps appointments behind ready jobs', () => {
+  const jobs = [
+    {id:'done',status:'completed',createdAt:'2026-01-06'},
+    {id:'normal-b',status:'queued',createdAt:'2026-01-02'},
+    {id:'future',status:'queued',priority:1,scheduledAt:'2026-12-31',createdAt:'2026-01-01'},
+    {id:'high',status:'queued',priority:1,createdAt:'2026-01-03'},
+    {id:'normal-a',status:'queued',createdAt:'2026-01-01'},
+    {id:'running',status:'downloading',priority:-1,createdAt:'2026-01-01'},
+  ];
+  assert.deepEqual(sortDownloadQueue(jobs,Date.parse('2026-03-01')).map(j=>j.id),['running','high','normal-a','normal-b','future','done']);
+  assert.equal(jobs[0].id,'done');
+  assert.equal(normalizedSettings({speedLimitKB:'512'}).speedLimitKB,512);
+  assert.equal(normalizedSettings({autoCheckUpdates:false}).autoCheckUpdates,false);
 });

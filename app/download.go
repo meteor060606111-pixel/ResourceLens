@@ -32,6 +32,13 @@ func (e *Engine) startDownload(id string, requestedQuality ...string) (string, e
 	return e.startDownloadOptions(id, quality, true)
 }
 func (e *Engine) startDownloadOptions(id, quality string, force bool) (string, error) {
+	return e.startDownloadPlanned(id, quality, force, DownloadPlan{})
+}
+
+func (e *Engine) startDownloadPlanned(id, quality string, force bool, plan DownloadPlan) (string, error) {
+	if err := validateDownloadPlan(plan); err != nil {
+		return "", err
+	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	r := e.resources[id]
@@ -77,7 +84,7 @@ func (e *Engine) startDownloadOptions(id, quality string, force bool) (string, e
 		cancel()
 		return "", err
 	}
-	j := &Job{ID: jobID, ResourceID: id, Name: name, URL: r.URL, Status: "queued", Total: r.Size, CreatedAt: time.Now(), cancel: cancel, RequestedQuality: quality, OutputDir: outputDir}
+	j := &Job{ID: jobID, ResourceID: id, Name: name, URL: r.URL, Status: "queued", Total: r.Size, CreatedAt: time.Now(), cancel: cancel, RequestedQuality: quality, OutputDir: outputDir, Priority: plan.Priority, ScheduledAt: plan.ScheduledAt}
 	j.Quality = r.Quality
 	if r.WechatVideo {
 		j.Quality = wechatQualityLabel(quality)
@@ -102,23 +109,21 @@ func (e *Engine) startDownloadOptions(id, quality string, force bool) (string, e
 	return jobID, nil
 }
 func (e *Engine) launchDownloadLocked(ctx context.Context, cancel context.CancelFunc, j *Job, copyResource Resource, cfg Config, quality string) {
-	sem := e.downloadSem
 	e.workers.Add(1)
 	go func() {
 		defer e.workers.Done()
 		defer cancel()
-		select {
-		case sem <- struct{}{}:
-			defer func() { <-sem }()
-		case <-ctx.Done():
-			e.finishJob(j, ctx.Err())
+		if err := e.awaitDownloadSlot(ctx, j); err != nil {
+			e.finishJob(j, err)
 			return
 		}
-		e.mu.Lock()
-		j.Status = "downloading"
-		j.started = time.Now()
-		j.speedSampleAt = j.started
-		e.mu.Unlock()
+		defer func() {
+			e.mu.Lock()
+			e.runningDownloads--
+			e.wakeQueueLocked()
+			e.mu.Unlock()
+		}()
+		cfg.SpeedLimitKB = int(j.limiter.bytesPerSecond / 1024)
 		var err error
 		if copyResource.Kind == "page" || copyResource.Kind == "playlist" || copyResource.Type == "playlist" {
 			err = e.downloadVideo(ctx, j, &copyResource, cfg)

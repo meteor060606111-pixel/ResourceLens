@@ -80,7 +80,11 @@ func (e *Engine) watchVideoConnection(ctx context.Context, cancel context.Cancel
 			} else if status == "downloading" && now.Sub(sampleAt) >= 30*time.Second {
 				rate := float64(max(0, bytes-sampleBytes)) / now.Sub(sampleAt).Seconds()
 				sampleAt, sampleBytes = now, bytes
-				if rate < 32*1024 {
+				threshold := float64(32 * 1024)
+				if j.limiter != nil && j.limiter.bytesPerSecond > 0 {
+					threshold = min(threshold, float64(j.limiter.bytesPerSecond)/4)
+				}
+				if rate < threshold {
 					if attempt < videoConnectionAttempts {
 						message = "当前连接持续低速"
 					} else {
@@ -169,6 +173,9 @@ func (e *Engine) downloadVideo(ctx context.Context, j *Job, r *Resource, cfg Con
 			"--print", "after_move:RL_FILE:%(filepath)j",
 			"--progress-template", "download:RL_PROGRESS:%(info.format_id)s:%(progress)j",
 			"--progress-template", "postprocess:RL_POST:%(progress.status)s")
+		if cfg.SpeedLimitKB > 0 {
+			args = append(args, "--limit-rate", strconv.Itoa(cfg.SpeedLimitKB)+"K", "--concurrent-fragments", "1")
+		}
 		if selector := selectedVideoSelector(r); selector != "" {
 			args = append(args, "-f", selector)
 		}

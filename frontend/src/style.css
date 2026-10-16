@@ -577,3 +577,14 @@ kbd { display: inline-block; min-width: 25px; padding: 2px 6px; border: 1px soli
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .progress-track.unknown > div { transform: none; }
 }
+
+/* Queue controls use the existing glass tokens and never alter window chrome. */
+.queue-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;flex-shrink:0;padding:14px 16px;margin-bottom:12px;border:1px solid var(--line);border-radius:16px;background:var(--inset)}
+.queue-overview{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-right:auto;font-size:12px;color:var(--muted)}
+.queue-overview strong{font-size:13px;color:var(--ink)}
+.queue-overview>span{display:inline-flex;align-items:center;gap:5px}
+.queue-explanation{flex-basis:100%;margin:0;font-size:12px;line-height:1.6;color:var(--muted)}
+.job-queue-meta{display:flex;flex-wrap:wrap;gap:7px;font-size:11px;color:var(--accent);margin:4px 0}
+.job-plan-button{font-size:11px;margin-top:7px;padding:0;min-height:24px}
+.plan-resource{overflow-wrap:anywhere;color:var(--muted);font-size:13px;line-height:1.6}
+.download-plan input[type="datetime-local"]{width:100%;font:inherit;color:var(--ink);color-scheme:light}

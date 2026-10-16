@@ -9,7 +9,7 @@ resourcelens_go="${GO_EXECUTABLE:-go}"
 resourcelens_python="${PYTHON_EXECUTABLE:-python3}"
 resourcelens_tools="${RESOURCELENS_TOOLS_DIR:-$PWD/video-engine}"
 resourcelens_music="${RESOURCELENS_MUSIC_DIR:-$PWD/release/music-engine-$resourcelens_arch}"
-resourcelens_out="${RESOURCELENS_OUTPUT_DIR:-$PWD/release/macos-$resourcelens_arch}"
+resourcelens_out="${RESOURCELENS_OUTPUT_DIR:-$PWD/release/macos-$resourcelens_arch.noindex}"
 resourcelens_version="$(sed -n 's/^const appVersion = "\(.*\)"/\1/p' app/features.go)"
 resourcelens_bundle="$resourcelens_out/ResourceLens.app"
 
@@ -69,6 +69,7 @@ for resourcelens_size in 16 32 128 256 512; do
 done
 iconutil -c icns "$resourcelens_icons" -o "$resourcelens_bundle/Contents/Resources/ResourceLens.icns"
 
+"$resourcelens_python" installer/macos/compact-runtime.py --bundle "$resourcelens_bundle"
 resourcelens_identity="${MACOS_SIGN_IDENTITY:--}"
 for resourcelens_tool in yt-dlp ffmpeg ffprobe node; do
   if [ "$resourcelens_identity" = - ]; then
@@ -84,6 +85,7 @@ else
   codesign --force --timestamp --options runtime --sign "$resourcelens_identity" "$resourcelens_bundle"
 fi
 codesign --verify --deep --strict "$resourcelens_bundle"
+"$resourcelens_python" installer/macos/compact-runtime.py --bundle "$resourcelens_bundle" --verify
 plutil -lint "$resourcelens_bundle/Contents/Info.plist"
 
 resourcelens_stage="$resourcelens_out/dmg-content"
@@ -109,4 +111,13 @@ if [ -n "${MACOS_NOTARY_PROFILE:-}" ]; then
 fi
 resourcelens_digest="$(shasum -a 256 "$resourcelens_dmg" | awk '{print $1}')"
 printf '%s  %s\n' "$resourcelens_digest" "$(basename "$resourcelens_dmg")" > "$resourcelens_dmg.sha256"
-echo "macOS app and DMG ready: $resourcelens_out"
+# Generated bundles must not become extra applications in Spotlight/Launchpad.
+# Preserve only the current architecture's newest verified installer.
+rm -rf "$resourcelens_stage" "$resourcelens_icons"
+if [ "${RESOURCELENS_KEEP_APP:-0}" != 1 ]; then rm -rf "$resourcelens_bundle"; fi
+for resourcelens_old in "$resourcelens_out"/ResourceLens-*-macos-"$resourcelens_arch".dmg; do
+  if [ -f "$resourcelens_old" ] && [ "$resourcelens_old" != "$resourcelens_dmg" ]; then
+    rm -f "$resourcelens_old" "$resourcelens_old.sha256"
+  fi
+done
+echo "Verified macOS installer ready: $resourcelens_dmg"

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -183,7 +184,7 @@ func (e *Engine) setUpdateInfo(info UpdateInfo) error {
 	return nil
 }
 func (e *Engine) loadUpdateInfo() {
-	info := UpdateInfo{CurrentVersion: appVersion, Status: "idle", Message: "支持选择本地新版安装程序；在线更新源可在设置中预留"}
+	info := UpdateInfo{CurrentVersion: appVersion, Status: "idle", Message: "可检查新版，或选择本地安装包升级"}
 	if b, err := os.ReadFile(e.updateStatePath()); err == nil {
 		var saved UpdateInfo
 		if json.Unmarshal(b, &saved) == nil {
@@ -204,7 +205,11 @@ func (e *Engine) loadUpdateInfo() {
 			}
 		}
 	}
+	if info.Version != "" && compareVersions(info.Version, appVersion) <= 0 {
+		info.Available, info.CanInstall = false, false
+	}
 	info.CanRollback = e.hasUpdateBackup()
+	e.pruneUpdatePackages(info.Path)
 	e.mu.Lock()
 	e.update = info
 	e.mu.Unlock()
@@ -225,6 +230,16 @@ func (e *Engine) checkUpdate() (any, error) {
 	}
 	defer unlock()
 	feedURL := e.configSnapshot().UpdateURL
+	if feedURL == "" && runtime.GOOS == "darwin" {
+		info, err := e.checkGitHubMacUpdate()
+		if err != nil {
+			return nil, err
+		}
+		if err := e.setUpdateInfo(info); err != nil {
+			return nil, err
+		}
+		return info, nil
+	}
 	if feedURL == "" {
 		info := UpdateInfo{Status: "idle", Message: "尚未配置在线更新源，请选择本地新版安装程序"}
 		if err := e.setUpdateInfo(info); err != nil {
@@ -336,7 +351,7 @@ func (e *Engine) downloadUpdate() (any, error) {
 	e.mu.RLock()
 	info := e.update
 	e.mu.RUnlock()
-	if info.Source != "online" || !info.Available || info.URL == "" || !shaPattern.MatchString(info.SHA256) {
+	if (info.Source != "online" && info.Source != "github") || !info.Available || info.URL == "" || !shaPattern.MatchString(info.SHA256) {
 		return nil, errors.New("请先检查更新并选择可用新版")
 	}
 	if err := validateUpdateURL(info.URL); err != nil {
@@ -399,7 +414,7 @@ func (e *Engine) downloadUpdate() (any, error) {
 		return fail(err)
 	}
 	final := prepared.(UpdateInfo)
-	final.Source = "online"
+	final.Source = info.Source
 	final.URL = info.URL
 	final.Message = "安装包版本和 SHA-256 已与更新源匹配，点击安装后升级"
 	if err = e.setUpdateInfo(final); err != nil {
@@ -473,4 +488,21 @@ func replaceFromBackup(backup, target string) error {
 		return err
 	}
 	return replaceFile(temp, target)
+}
+
+// Only remove installers created by prepareLocalUpdate in our private cache.
+// User downloads, apps elsewhere and a currently prepared package are untouched.
+func (e *Engine) pruneUpdatePackages(keep string) {
+	owned := regexp.MustCompile(`^ResourceLens-(\d+\.\d+\.\d+(?:\.\d+)?)-[a-f0-9]{12}\.(dmg|exe)$`)
+	entries, _ := os.ReadDir(e.updateDir())
+	for _, entry := range entries {
+		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+			continue
+		}
+		match := owned.FindStringSubmatch(entry.Name())
+		path := filepath.Join(e.updateDir(), entry.Name())
+		if match != nil && path != keep && compareVersions(match[1], appVersion) <= 0 {
+			_ = os.Remove(path)
+		}
+	}
 }

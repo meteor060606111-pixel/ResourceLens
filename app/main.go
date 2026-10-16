@@ -93,6 +93,7 @@ func main() {
 	}
 	defer engine.Close()
 	engine.loadUpdateInfo()
+	engine.startUpdateChecks()
 	if *mobile {
 		if err := engine.startMobile(); err != nil {
 			log.Print(err)

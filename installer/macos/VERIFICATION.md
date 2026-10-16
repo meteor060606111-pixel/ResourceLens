@@ -1,32 +1,29 @@
-# macOS 1.6.4 验证记录
+# macOS 1.7.2 验证记录
 
-本机验证：Apple Silicon，macOS 27.0.1，2026-10-15 至 2026-10-16。
+验证日期：2026-10-16；本机为 Apple Silicon，macOS 27.0.1，完整 Xcode 27。最低系统要求保持 macOS 14。
 
-## 窗口和界面
+## 体积与功能边界
 
-- 使用透明的 AppKit 标题栏，WKWebView 通过 `contentLayoutGuide` 避开标题栏；没有自定义鼠标移动或坐标累加代码。
-- 用户在实机拖动后确认“现在正常”。窗口内按钮、输入和页面导航通过原生应用操作验收。
-- 资源列表四角圆角、底部重复分隔线、空状态文字布局和临时诊断条通过 WKWebView 截图检查。
-- 修复后台启动把入场动画暂停在透明首帧的问题；从 Applications 后台启动后立即截图，列表完整显示。
-- `.app` 已从 `/Applications` 启动，读取原有配置，显示 1.6.4；安装只替换应用包，旧版应用另行保留。
+| 项目 | 精简前 | 1.7.2 | 减少 |
+| --- | --- | --- | --- |
+| 应用实际占用（du） | 684.1 MiB | 409.8 MiB | 40.1% |
+| Apple 芯片 DMG | 343.5 MiB | 225.7 MiB | 34.3% |
 
-## 音乐
+通过共用 Node.js、删除开发工具与头文件、Tk 示例、未被动态依赖的 CPython 嵌入库和非必需符号实现。保留业务依赖、数据、许可证、57 个平台注册与 24 个歌单实现。PyInstaller 的 yt-dlp 包含尾部内嵌档案，必须原样保留，不能使用 strip；构建检查已覆盖所有媒体工具启动。详细字节数在应用 `Contents/Resources/runtime-footprint.json`。
 
-- 随包 CPython 3.12.15、musicdl 2.14.1，探测到 57 个平台注册项，其中 24 项实现歌单接口；平台注册不表示第三方服务全部可用。
-- 原生界面搜索“小星星”：咪咕返回 6 首可用歌曲。
-- “小星星变奏曲 - 古典也疯狂”试听进入播放状态，播放器显示 2:29；下载任务完成，文件为 6,001,049 字节 MP3，ffprobe 验证音频流和 149.890612 秒时长。
-- 使用上游公开示例歌单 `228114498`，随包解释器和同一 JSON 桥接脚本解析成功，返回 50 首，耗时约 46 秒。
-- 解释器移到含空格的应用路径后仍可从其他工作目录运行；打包时运行 `pip check` 并保留依赖许可证。
+## 已执行验证
 
-## 自动化与包检查
+- 已在真实 `/Applications/ResourceLens.app` 从旧版原位升级并自动重启至 1.7.2。校验失败恢复的目录交换测试通过；旧应用未退出时的超时保护也保留了原应用。
+- 安装后更新缓存无 DMG、worker 或旧应用残留；工作区构建输出无 `.app`，仅保留当前 arm64 DMG。Spotlight 按 bundle id 只返回 `/Applications/ResourceLens.app`。
+- `codesign --verify --deep --strict`、Info.plist 检查和 DMG 校验通过。当前仍为 ad-hoc 签名，未使用 Developer ID 或 Apple 公证，不能视作已具备公证发行资质。
+- 安装后的精简 Python、共用 Node 与媒体工具用于完整 `go test -race -tags desktop,production ./app ./frontend -count=1`，通过，app 测试约 51.7 秒。覆盖 HLS / DASH 合并成有效 MP4、音乐音轨验证、HTTP 分段、续传、取消、队列优先级、预约与限速。
+- `go vet` 通过；11 个前端测试、2 个音乐桥接测试、5 个 macOS 包装测试通过；Vite 生产构建通过。
+- 精简运行时执行 57 个源、24 个歌单实现和 Node v24.19.0 探测通过。公开咪咕“小星星”搜索返回 6 条可用结果，约 4.6 秒。平台注册不代表所有平台当前都可用。
+- 原生 WebKit 界面通过 Computer Use 验证：页面显示正确版本与本地服务就绪；队列暂停/恢复、优先级计划保存、设置限速入口、更新包选择/校验/安装确认可操作。测试文件 1 MiB 完整下载，SHA-256 与本机生成数据一致，测试记录和文件已清理。
+- 1280×800 原生窗口截图检查通过，无空白页或框架报错覆盖；玻璃界面、四角圆角与原生标题栏实现保留。未改动已由用户确认正常的 AppKit 拖动实现。
 
-- 前端测试 10 项、Python 桥接测试 2 项、打包验证测试 3 项通过。
-- `go test -tags desktop,production ./app ./frontend` 和 `go vet` 通过。
-- 本地 arm64 `.app` 及随包原生代码签名检查通过；DMG 的 `hdiutil verify` 通过。
-- 两种芯片的发布包由 GitHub Actions 分别在原生 macOS runner 构建；Windows 兼容任务通过后才发布。
+## 验证范围
 
-## 限制
+桌面验收使用原生 AppKit / WKWebView 与 Computer Use；浏览器插件未提供，本轮不通过之前受限的 localhost 浏览器路径重试。原生环境没有直接采集网页开发者控制台，不能声明完整 JS 控制台检查；页面渲染、可见状态、文件字节和后端回归用于交叉验证。
 
-完整音乐包最低系统为 macOS 14。当前使用 ad hoc 本地签名，没有 Developer ID 签名和 Apple 公证；本机 `spctl --assess` 返回 rejected，不等同于通过 Gatekeeper 外部分发认证。
-
-真实微信视频号捕获仍需对应客户端、网络配置及用户授权验证；不能把 Windows 的实测结果当作 Mac 实测结果。
+iPhone 本轮只做源码架构研究，没有真机验收，也没有重新部署手机自动化。Intel 构建与 Windows 兼容性以 GitHub Actions 的对应检查为准，本机只验证 Apple 芯片安装包。

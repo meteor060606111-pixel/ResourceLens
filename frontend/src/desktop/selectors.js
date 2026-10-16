@@ -32,6 +32,8 @@ export function normalizedSettings(config = {}) {
     https: config.https ?? true, hostFilter: config.hostFilter || '',
     classifyBy: config.classifyBy || 'none', nameTemplate: config.nameTemplate || '{title}',
     duplicatePolicy: config.duplicatePolicy || 'ask', updateUrl: config.updateUrl || '',
+    speedLimitKB: Number(config.speedLimitKB ?? 0), queuePaused: config.queuePaused ?? false,
+    autoCheckUpdates: config.autoCheckUpdates ?? true,
     onboardingDone: config.onboardingDone ?? true, mobilePort: Number(config.mobilePort ?? 19090),
   };
 }
@@ -44,4 +46,17 @@ export function shortcutAction(event, hasDialog = false) {
   if (key === 'f') return 'search';
   // Do not consume input-editing chords or the macOS/Windows system shortcuts.
   return ({'1': 'capture', '2': 'downloads', '3': 'settings', '4': 'help', '5':'music'})[key] || '';
+}
+
+export function sortDownloadQueue(jobs, now = Date.now()) {
+  const group = j => j.status === 'queued' ? (Date.parse(j.scheduledAt) > now ? 2 : 1) : activeStatus(j.status) ? 0 : 3;
+  return jobs.slice().sort((a, b) => {
+    const delta = group(a) - group(b);
+    if (delta) return delta;
+    if (a.status === 'queued' && b.status === 'queued') {
+      if (group(a) === 2) return Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt) || String(a.id).localeCompare(String(b.id));
+      return (b.priority || 0) - (a.priority || 0) || Date.parse(a.createdAt) - Date.parse(b.createdAt) || String(a.id).localeCompare(String(b.id));
+    }
+    return Date.parse(b.createdAt) - Date.parse(a.createdAt) || String(a.id).localeCompare(String(b.id));
+  });
 }

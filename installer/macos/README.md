@@ -56,3 +56,12 @@ MACOS_NOTARY_PROFILE='your-keychain-profile' ./build-macos.sh
 从顶部透明的系统标题栏拖动窗口。网页使用原生 content layout guide 避开标题栏，拖动、双击及全屏行为由 AppKit 管理；没有自定义鼠标位移或坐标累加逻辑。页面标题、按钮和输入框保持普通网页交互。
 
 音乐 Python 位于 `ResourceLens.app/Contents/Resources/music-engine/runtime/bin/python3`，不依赖当前工作目录；使用隔离解释器模式启动。已有数据目录 venv 和 `RESOURCELENS_MUSIC_PYTHON` 自定义路径仍可使用。复制或移动 `.app` 后无需修复绝对路径。打包依赖最低系统为 macOS 14，旧版 macOS 13.5 的视频工作台可从旧版本 Release 获取。
+
+
+## 1.7.2 更新和副本清理
+
+“设置 → 关于与更新”默认从 GitHub 获取本机芯片对应的稳定 macOS 安装包，自动检查可关闭，安装前会确认。只有安装在 `/Applications/ResourceLens.app` 或 `~/Applications/ResourceLens.app` 的应用支持原位升级；其他位置请先移入 Applications。
+
+升级成功后清理旧应用与已用的暂存安装包，失败时恢复原应用；极少数恢复失败时保留恢复目录并在更新状态里给出位置。自定义下载目录、配置和用户文件不会随升级清理。安装包、主程序与已存在的 Developer ID 团队也会重新校验。
+
+构建默认输出在 `release/macos-<arch>.noindex`，打包后不保留 `.app` 副本；需要调试应用包时显式设置 `RESOURCELENS_KEEP_APP=1`，调试结束需自行清理。CI 继续发布 DMG 与 SHA-256。原始参考仓库仅用于源码研究，没有作为应用安装。

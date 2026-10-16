@@ -27,18 +27,21 @@ import (
 )
 
 type Config struct {
-	DownloadDir     string `json:"downloadDir"`
-	ProxyPort       int    `json:"proxyPort"`
-	Segments        int    `json:"segments"`
-	Concurrent      int    `json:"concurrent"`
-	HTTPS           bool   `json:"https"`
-	HostFilter      string `json:"hostFilter"`
-	ClassifyBy      string `json:"classifyBy"`
-	NameTemplate    string `json:"nameTemplate"`
-	DuplicatePolicy string `json:"duplicatePolicy"`
-	UpdateURL       string `json:"updateUrl"`
-	OnboardingDone  bool   `json:"onboardingDone"`
-	MobilePort      int    `json:"mobilePort"`
+	DownloadDir      string `json:"downloadDir"`
+	ProxyPort        int    `json:"proxyPort"`
+	Segments         int    `json:"segments"`
+	Concurrent       int    `json:"concurrent"`
+	HTTPS            bool   `json:"https"`
+	HostFilter       string `json:"hostFilter"`
+	ClassifyBy       string `json:"classifyBy"`
+	NameTemplate     string `json:"nameTemplate"`
+	DuplicatePolicy  string `json:"duplicatePolicy"`
+	UpdateURL        string `json:"updateUrl"`
+	OnboardingDone   bool   `json:"onboardingDone"`
+	MobilePort       int    `json:"mobilePort"`
+	SpeedLimitKB     int    `json:"speedLimitKB"`
+	QueuePaused      bool   `json:"queuePaused"`
+	AutoCheckUpdates bool   `json:"autoCheckUpdates"`
 }
 type Resource struct {
 	ID                    string            `json:"id"`
@@ -91,6 +94,9 @@ type Job struct {
 	Quality          string    `json:"quality,omitempty"`
 	RequestedQuality string    `json:"requestedQuality,omitempty"`
 	OutputDir        string    `json:"outputDir,omitempty"`
+	Priority         int       `json:"priority"`
+	ScheduledAt      time.Time `json:"scheduledAt,omitempty"`
+	limiter          *downloadLimiter
 	pauseRequested   bool
 	completionNotice string
 	done             atomic.Int64
@@ -118,7 +124,8 @@ type Engine struct {
 	closeOnce              sync.Once
 	workers                sync.WaitGroup
 	sessionMu              sync.Mutex
-	downloadSem            chan struct{}
+	queueWake              chan struct{}
+	runningDownloads       int
 	proxySnapshot          *ProxySnapshot
 	certInstalled          atomic.Bool
 	jobSequence            atomic.Uint64
@@ -163,7 +170,7 @@ func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg := Config{DownloadDir: defaultDownloadDirectory(root), ProxyPort: 18999, Segments: 8, Concurrent: 3, HTTPS: true, ClassifyBy: "none", NameTemplate: "{title}", DuplicatePolicy: "ask"}
+	cfg := Config{DownloadDir: defaultDownloadDirectory(root), ProxyPort: 18999, Segments: 8, Concurrent: 3, HTTPS: true, ClassifyBy: "none", NameTemplate: "{title}", DuplicatePolicy: "ask", AutoCheckUpdates: runtime.GOOS == "darwin"}
 	if data, err := os.ReadFile(filepath.Join(root, "data", "config.json")); err == nil {
 		if err = json.Unmarshal(data, &cfg); err != nil {
 			return nil, fmt.Errorf("读取配置失败：%w", err)
@@ -185,7 +192,7 @@ func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
 		cancel()
 		return nil, err
 	}
-	e := &Engine{root: root, config: cfg, token: hex.EncodeToString(token), resources: map[string]*Resource{}, jobs: map[string]*Job{}, ctx: ctx, cancel: cancel, conns: map[net.Conn]bool{}, downloadSem: make(chan struct{}, cfg.Concurrent), transport: &http.Transport{Proxy: nil, ForceAttemptHTTP2: false, DisableCompression: true, MaxIdleConns: 100, IdleConnTimeout: 60 * time.Second, TLSHandshakeTimeout: 15 * time.Second, ResponseHeaderTimeout: 30 * time.Second, DialContext: (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext}}
+	e := &Engine{root: root, config: cfg, token: hex.EncodeToString(token), resources: map[string]*Resource{}, jobs: map[string]*Job{}, ctx: ctx, cancel: cancel, conns: map[net.Conn]bool{}, queueWake: make(chan struct{}), transport: &http.Transport{Proxy: nil, ForceAttemptHTTP2: false, DisableCompression: true, MaxIdleConns: 100, IdleConnTimeout: 60 * time.Second, TLSHandshakeTimeout: 15 * time.Second, ResponseHeaderTimeout: 30 * time.Second, DialContext: (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext}}
 	e.readProxy = proxyState
 	e.ui = ui
 	e.writeProxy = applyProxy
@@ -242,6 +249,9 @@ func NewEngine(root string, ui fs.FS, port int) (*Engine, error) {
 	return e, nil
 }
 func validateConfig(c Config) error {
+	if c.SpeedLimitKB < 0 || c.SpeedLimitKB > 1048576 {
+		return errors.New("单任务限速须在 0–1048576 KiB/s 之间，0 表示不限速")
+	}
 	if c.MobilePort != 0 && (c.MobilePort < 1024 || c.MobilePort > 65535) {
 		return errors.New("手机连接端口须在 1024–65535 之间")
 	}
@@ -326,7 +336,7 @@ func (e *Engine) state() map[string]any {
 		if speed > 0 && j.Total > done {
 			eta = float64(j.Total-done) / speed
 		}
-		js = append(js, map[string]any{"id": j.ID, "resourceId": j.ResourceID, "name": j.Name, "url": j.URL, "status": j.Status, "total": j.Total, "done": done, "speed": speed, "eta": eta, "file": j.File, "error": j.Error, "createdAt": j.CreatedAt, "percent": j.Percent, "notice": j.Notice, "resumeAvailable": j.ResumeAvailable, "quality": j.Quality, "requestedQuality": j.RequestedQuality})
+		js = append(js, map[string]any{"id": j.ID, "resourceId": j.ResourceID, "name": j.Name, "url": j.URL, "status": j.Status, "total": j.Total, "done": done, "speed": speed, "eta": eta, "file": j.File, "error": j.Error, "createdAt": j.CreatedAt, "percent": j.Percent, "notice": j.Notice, "resumeAvailable": j.ResumeAvailable, "quality": j.Quality, "requestedQuality": j.RequestedQuality, "priority": j.Priority, "scheduledAt": j.ScheduledAt})
 	}
 	sort.Slice(js, func(i, j int) bool { return js[i]["createdAt"].(time.Time).After(js[j]["createdAt"].(time.Time)) })
 	bs := make([]ParseBatch, 0, len(e.batches))
@@ -393,8 +403,9 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 		Path     string   `json:"path"`
 		Mode     string   `json:"mode"`
 		Config   Config   `json:"config"`
-		Keyword  string   `json:"keyword"`
-		Sources  []string `json:"sources"`
+		DownloadPlan
+		Keyword string   `json:"keyword"`
+		Sources []string `json:"sources"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&in); err != nil {
 		e.writeJSON(w, nil, errors.New("请求格式无效"))
@@ -458,7 +469,11 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 	case "/api/preview":
 		result, err = e.createMediaTicket(in.ID, in.Mode)
 	case "/api/download":
-		result, err = e.startDownloadOptions(in.ID, in.Quality, in.Force)
+		result, err = e.startDownloadPlanned(in.ID, in.Quality, in.Force, in.DownloadPlan)
+	case "/api/job-plan":
+		err = e.changeJobPlan(in.ID, in.DownloadPlan)
+	case "/api/queue-control":
+		err = e.setQueuePaused(in.Enabled)
 	case "/api/pause":
 		err = e.pauseJob(in.ID)
 	case "/api/resume":
@@ -508,13 +523,6 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 			e.mu.Lock()
 			if in.Config.ProxyPort != e.config.ProxyPort {
 				err = errors.New("当前版本的代理端口固定，不能在运行中修改")
-			} else {
-				for _, j := range e.jobs {
-					if activeStatus(j.Status) {
-						err = errors.New("请等待下载完成或取消任务后再保存设置")
-						break
-					}
-				}
 			}
 			if err == nil {
 				err = os.MkdirAll(in.Config.DownloadDir, 0755)
@@ -528,7 +536,7 @@ func (e *Engine) serveAPI(w http.ResponseWriter, r *http.Request) {
 			}
 			if err == nil {
 				e.config = in.Config
-				e.downloadSem = make(chan struct{}, in.Config.Concurrent)
+				e.wakeQueueLocked()
 			}
 			e.mu.Unlock()
 		}
@@ -583,6 +591,14 @@ func (e *Engine) writeJSON(w http.ResponseWriter, data any, err error) {
 	}
 	json.NewEncoder(w).Encode(map[string]any{"ok": true, "data": data})
 }
+func (e *Engine) persistConfig(cfg Config) error {
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	return atomicWrite(filepath.Join(e.root, "data", "config.json"), data, 0600)
+}
+
 func atomicWrite(file string, b []byte, mode os.FileMode) error {
 	tmp := file + ".tmp"
 	if err := os.WriteFile(tmp, b, mode); err != nil {

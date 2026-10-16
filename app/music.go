@@ -132,6 +132,11 @@ func (e *Engine) callMusicBridge(ctx context.Context, request musicBridgeRequest
 	cmd.Stdin = bytes.NewReader(body)
 	cmd.Dir = e.root
 	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8", "PYTHONDONTWRITEBYTECODE=1")
+	if tools, err := e.videoTools(); err == nil {
+		// musicdl resolves Node with PATH; share the packaged runtime instead of
+		// depending on shell tools or keeping a second Node distribution.
+		cmd.Env = append(cmd.Env, "PATH="+tools+string(os.PathListSeparator)+os.Getenv("PATH"))
+	}
 	out := &limitedBuffer{limit: 4 << 20}
 	cmd.Stdout = out
 	cmd.Stderr = &tailBuffer{limit: 2048}
