@@ -119,7 +119,9 @@ func main() {
 		windowsOptions = &winoptions.Options{WebviewIsTransparent: true, WindowIsTranslucent: true, BackdropType: winoptions.Acrylic, Theme: winoptions.Light}
 	case "darwin":
 		background = &options.RGBA{R: 255, G: 255, B: 255, A: 0}
-		macOptions = &mac.Options{TitleBar: mac.TitleBarHiddenInset(), Appearance: mac.NSAppearanceNameAqua, WebviewIsTransparent: true, WindowIsTranslucent: true}
+		// Keep a real AppKit title bar outside the webview so dragging, window
+		// controls, double-click actions and screen-edge behaviour stay native.
+		macOptions = &mac.Options{TitleBar: mac.TitleBarHidden(), Appearance: mac.NSAppearanceNameAqua, WebviewIsTransparent: true, WindowIsTranslucent: true}
 	}
 	err = wails.Run(&options.App{Title: "拾流 · ResourceLens", Width: 1280, Height: 800, MinWidth: 980, MinHeight: 650, BackgroundColour: background, Windows: windowsOptions, Mac: macOptions, AssetServer: &assetserver.Options{Assets: assets}, Bind: []interface{}{app}, OnStartup: func(ctx context.Context) {
 		app.ctx = ctx
@@ -127,6 +129,7 @@ func main() {
 		requestApplicationQuit = func() { engine.Close(); wruntime.Quit(ctx) }
 		quitMu.Unlock()
 	}, OnDomReady: func(ctx context.Context) {
+		configureDesktopWindow()
 		instance.listen(func() { wruntime.WindowShow(ctx); wruntime.WindowUnminimise(ctx); activateCurrentWindow() })
 	}, OnShutdown: func(context.Context) { quitMu.Lock(); requestApplicationQuit = nil; quitMu.Unlock() }, OnBeforeClose: func(context.Context) bool { engine.Close(); return false }})
 	if err != nil {

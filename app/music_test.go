@@ -271,3 +271,28 @@ func TestMusicSourceValidationAndStableIdentity(t *testing.T) {
 		t.Fatal("non HTTP source accepted")
 	}
 }
+
+func TestMusicInterpreterCandidatesSurviveBundleRelocation(t *testing.T) {
+	bundle := filepath.Join(t.TempDir(), "Applications with spaces", "拾流.app", "Contents")
+	exe := filepath.Join(bundle, "MacOS", "ResourceLens")
+	data, cwd := t.TempDir(), t.TempDir()
+	paths := musicPythonCandidates(exe, data, cwd, "darwin")
+	want := filepath.Join(bundle, "Resources", "music-engine", "runtime", "bin", "python3")
+	if paths[0] != want {
+		t.Fatalf("bundle runtime is not preferred: %v", paths)
+	}
+	legacy := filepath.Join(data, "music-engine", "venv", "bin", "python3")
+	found := false
+	for _, path := range paths {
+		if path == legacy {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("existing manually prepared macOS environments lost")
+	}
+	windows := musicPythonCandidates(exe, data, cwd, "windows")
+	if windows[0] != filepath.Join(filepath.Dir(exe), "music-engine", "runtime", "python.exe") || windows[1] != filepath.Join(filepath.Dir(exe), "music-engine", "venv", "Scripts", "python.exe") {
+		t.Fatal("Windows runtime precedence changed", windows)
+	}
+}

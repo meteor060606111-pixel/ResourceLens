@@ -1,6 +1,6 @@
 # macOS 构建与安装
 
-支持 macOS 13.5 及以上，分别生成 Apple 芯片 (`arm64`) 和 Intel (`amd64`) 安装包。桌面使用 Wails 的原生 WKWebView，媒体引擎已内置，使用时不需要 Go、Node.js 或 Homebrew。
+1.6.4 完整音乐版支持 macOS 14 及以上，分别生成 Apple 芯片 (`arm64`) 和 Intel (`amd64`) 安装包。桌面使用 Wails 的原生 WKWebView，媒体与音乐引擎已内置，使用时不需要 Go、Node.js、Python 或 Homebrew。
 
 ## 从源码构建
 
@@ -9,13 +9,13 @@
 ```bash
 xcode-select --install
 ./build-macos.sh
-# 在 Mac 上交叉构建 Intel；测试默认仍在构建机器架构上执行
+# 完整音乐引擎在对应芯片的 Mac 上原生构建；CI 自动分别构建两种架构
 RESOURCELENS_ARCH=amd64 ./build-macos.sh
 ```
 
-脚本核对固定 SHA-256 后下载媒体引擎，构建前端，运行 Go 测试和 vet，再创建 `.app`、DMG 和 `.sha256`。默认产物在 `release/macos-arm64` 或 `release/macos-amd64`。`installer/macos/toolchain.json` 管理固定工具来源和校验值。
+脚本核对固定 SHA-256 后下载媒体引擎、独立 CPython 和全部音乐依赖，构建前端，运行 Go 测试和 vet，再创建 `.app`、DMG 和 `.sha256`。默认产物在 `release/macos-arm64` 或 `release/macos-amd64`。`installer/macos/toolchain.json` 管理媒体工具来源与校验值；`music-toolchain.json` 固定 CPython 3.12.15、musicdl 2.14.1 及所有传递依赖。音乐环境在构建临时目录安装，通过 `pip check` 和异地运行探测后写入包中；不读取个人 venv。所有 Mach-O 动态库、扩展与子程序逐项核验架构并签名，保留原许可证。
 
-可设置 `GO_EXECUTABLE`、`PYTHON_EXECUTABLE`、`RESOURCELENS_TOOLS_DIR` 和 `RESOURCELENS_OUTPUT_DIR`。离线且已准备正确芯片的完整工具时使用 `RESOURCELENS_FETCH_TOOLS=0`。`RESOURCELENS_SKIP_TESTS=1` 只适用于已经完成测试的打包流程。
+可设置 `GO_EXECUTABLE`、`PYTHON_EXECUTABLE`、`RESOURCELENS_TOOLS_DIR`、`RESOURCELENS_MUSIC_DIR` 和 `RESOURCELENS_OUTPUT_DIR`。离线且已准备正确芯片的完整工具时使用 `RESOURCELENS_FETCH_TOOLS=0`。`RESOURCELENS_SKIP_TESTS=1` 只适用于已经完成测试的打包流程。
 
 GitHub Actions 使用原生 Apple 芯片和 Intel runner 分别测试并构建。推送 main 后生成安装包，在两个 Mac 任务和 Windows 兼容检查通过后发布 macOS Release；Pull Request 仅验证并提供构建产物。
 
@@ -50,3 +50,9 @@ MACOS_NOTARY_PROFILE='your-keychain-profile' ./build-macos.sh
 ## 验证边界
 
 自动化检查使用本地合成媒体，覆盖解析、DASH 合并、视频号前缀处理、暂停续传、兼容预览、进程取消和代理恢复。macOS 网络配置转换和恢复通过隔离快照测试；系统授权弹窗及已登录微信的真实捕获需要用户在本机完成。Mac 微信可能使用不同的请求结构或证书校验，不能沿用 README 中原 Windows 实测作为 Mac 实测结论。
+
+## 窗口与音乐
+
+从顶部透明的系统标题栏拖动窗口。网页使用原生 content layout guide 避开标题栏，拖动、双击及全屏行为由 AppKit 管理；没有自定义鼠标位移或坐标累加逻辑。页面标题、按钮和输入框保持普通网页交互。
+
+音乐 Python 位于 `ResourceLens.app/Contents/Resources/music-engine/runtime/bin/python3`，不依赖当前工作目录；使用隔离解释器模式启动。已有数据目录 venv 和 `RESOURCELENS_MUSIC_PYTHON` 自定义路径仍可使用。复制或移动 `.app` 后无需修复绝对路径。打包依赖最低系统为 macOS 14，旧版 macOS 13.5 的视频工作台可从旧版本 Release 获取。

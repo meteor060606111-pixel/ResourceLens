@@ -8,6 +8,7 @@ case "$resourcelens_arch" in arm64|amd64) ;; *) echo 'RESOURCELENS_ARCH must be 
 resourcelens_go="${GO_EXECUTABLE:-go}"
 resourcelens_python="${PYTHON_EXECUTABLE:-python3}"
 resourcelens_tools="${RESOURCELENS_TOOLS_DIR:-$PWD/video-engine}"
+resourcelens_music="${RESOURCELENS_MUSIC_DIR:-$PWD/release/music-engine-$resourcelens_arch}"
 resourcelens_out="${RESOURCELENS_OUTPUT_DIR:-$PWD/release/macos-$resourcelens_arch}"
 resourcelens_version="$(sed -n 's/^const appVersion = "\(.*\)"/\1/p' app/features.go)"
 resourcelens_bundle="$resourcelens_out/ResourceLens.app"
@@ -30,10 +31,14 @@ for resourcelens_tool in yt-dlp ffmpeg ffprobe node; do
   fi
 done
 
+"$resourcelens_python" installer/macos/prepare-music.py --arch "$resourcelens_arch" --output "$resourcelens_music"
+
 npm ci --prefix frontend --ignore-scripts
 npm run build --prefix frontend
 if [ "${RESOURCELENS_SKIP_TESTS:-0}" != 1 ]; then
   npm test --prefix frontend
+  "$resourcelens_python" app/helpers/musicdl_bridge_test.py
+  "$resourcelens_python" -m unittest discover -s installer/macos -p '*_test.py'
   "$resourcelens_go" test -tags desktop,production ./app ./frontend
   "$resourcelens_go" vet -tags desktop,production ./app ./frontend
 fi
@@ -43,12 +48,14 @@ cp installer/macos/Info.plist "$resourcelens_bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $resourcelens_version" "$resourcelens_bundle/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $resourcelens_version" "$resourcelens_bundle/Contents/Info.plist"
 resourcelens_cc="clang -arch $resourcelens_macho_arch"
-MACOSX_DEPLOYMENT_TARGET=13.5 GOOS=darwin GOARCH="$resourcelens_arch" CGO_ENABLED=1 CC="$resourcelens_cc" "$resourcelens_go" build -trimpath -tags desktop,production -ldflags '-s -w' -o "$resourcelens_bundle/Contents/MacOS/ResourceLens" ./app
+MACOSX_DEPLOYMENT_TARGET=14.0 GOOS=darwin GOARCH="$resourcelens_arch" CGO_ENABLED=1 CC="$resourcelens_cc" "$resourcelens_go" build -trimpath -tags desktop,production -ldflags '-s -w' -o "$resourcelens_bundle/Contents/MacOS/ResourceLens" ./app
 for resourcelens_tool in yt-dlp ffmpeg ffprobe node; do
   cp "$resourcelens_tools/$resourcelens_tool" "$resourcelens_bundle/Contents/Resources/video-engine/"
 done
 cp video-engine/yt-dlp-LICENSE.txt video-engine/yt-dlp-THIRD_PARTY_LICENSES.txt video-engine/ffmpeg-LICENSE video-engine/ORIGIN.md video-engine/MACOS.md "$resourcelens_bundle/Contents/Resources/video-engine/"
 cp "$resourcelens_tools/node-LICENSE.txt" installer/macos/toolchain.json "$resourcelens_bundle/Contents/Resources/video-engine/"
+rm -rf "$resourcelens_bundle/Contents/Resources/music-engine"
+ditto "$resourcelens_music" "$resourcelens_bundle/Contents/Resources/music-engine"
 cp LICENSE "$resourcelens_bundle/Contents/Resources/ResourceLens-LICENSE.txt"
 cp frontend/dist/third-party-notices.txt "$resourcelens_bundle/Contents/Resources/Frontend-THIRD_PARTY_NOTICES.txt"
 "$resourcelens_tools/ffmpeg" -version > "$resourcelens_bundle/Contents/Resources/video-engine/ffmpeg-build.txt" 2>&1 || true
@@ -70,6 +77,7 @@ for resourcelens_tool in yt-dlp ffmpeg ffprobe node; do
     codesign --force --timestamp --options runtime --entitlements installer/macos/entitlements.plist --sign "$resourcelens_identity" "$resourcelens_bundle/Contents/Resources/video-engine/$resourcelens_tool"
   fi
 done
+"$resourcelens_python" installer/macos/prepare-music.py --sign "$resourcelens_bundle/Contents/Resources/music-engine" --identity "$resourcelens_identity" --arch "$resourcelens_arch"
 if [ "$resourcelens_identity" = - ]; then
   codesign --force --sign - "$resourcelens_bundle"
 else
@@ -84,7 +92,17 @@ ditto "$resourcelens_bundle" "$resourcelens_stage/ResourceLens.app"
 ln -sfn /Applications "$resourcelens_stage/Applications"
 cp installer/macos/INSTALL.txt "$resourcelens_stage/安装说明.txt"
 resourcelens_dmg="$resourcelens_out/ResourceLens-$resourcelens_version-macos-$resourcelens_arch.dmg"
-hdiutil create -ov -volname "ResourceLens $resourcelens_version" -srcfolder "$resourcelens_stage" -format UDZO "$resourcelens_dmg"
+resourcelens_dmg_log="$resourcelens_out/dmg-create.log"
+for resourcelens_attempt in 1 2 3; do
+  if hdiutil create -ov -volname "ResourceLens $resourcelens_version" -srcfolder "$resourcelens_stage" -format UDZO "$resourcelens_dmg" >"$resourcelens_dmg_log" 2>&1; then
+    cat "$resourcelens_dmg_log"
+    break
+  fi
+  cat "$resourcelens_dmg_log" >&2
+  if [ "$resourcelens_attempt" = 3 ] || ! grep -q 'Resource busy' "$resourcelens_dmg_log"; then exit 1; fi
+  sleep "$((resourcelens_attempt * 2))"
+done
+hdiutil verify "$resourcelens_dmg"
 if [ -n "${MACOS_NOTARY_PROFILE:-}" ]; then
   xcrun notarytool submit "$resourcelens_dmg" --keychain-profile "$MACOS_NOTARY_PROFILE" --wait
   xcrun stapler staple "$resourcelens_dmg"

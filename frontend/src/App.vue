@@ -14,7 +14,7 @@ import {Search,Download,Settings,BookOpen,Link2,Play,Pause,Square,Trash2,Externa
 const page=ref('capture'),state=ref({resources:[],jobs:[],batches:[],config:{downloadDir:'',proxyPort:18999,segments:8,concurrent:3,https:true,hostFilter:'',classifyBy:'none',nameTemplate:'{title}',duplicatePolicy:'ask',updateUrl:'',onboardingDone:true},capture:false,certificateInstalled:false,proxyAddress:'127.0.0.1:18999'});
 const {appearance,systemMotion,systemTransparency,reducedMotion,reducedTransparency,background,glassStyle,pointerMove,clearHighlight,resetAppearance}=useGlass();
 const nativeDesktop=!!window.go?.main?.App?.Bootstrap;
-const isMac=computed(()=>state.value.platform==='darwin');
+const isMac=computed(()=>state.value.platform?state.value.platform==='darwin':/Mac/i.test(navigator.platform));
 const platformName=computed(()=>isMac.value?'macOS':'Windows');
 const loaded=ref(false),connectionError=ref(''),query=ref(''),type=ref('all'),selected=ref(''),checked=ref([]),jobChecked=ref([]),modal=ref(''),urlInput=ref(''),busy=ref(false),message=ref(''),messageError=ref(false),form=ref({}),confirmAction=ref(''),jobFilter=ref('all');
 const jobQuery=ref(''),resourceSort=ref('recent'),settingsTab=ref('files');

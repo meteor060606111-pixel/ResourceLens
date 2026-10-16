@@ -11,6 +11,7 @@ on:
       - 'build-macos.sh'
       - 'installer/macos/**'
       - 'video-engine/**'
+      - 'music-engine/**'
       - '.github/workflows/macos.yml'
   pull_request:
   workflow_dispatch:

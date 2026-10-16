@@ -87,19 +87,32 @@ func (e *Engine) musicPython() string {
 	}
 	exe, _ := os.Executable()
 	cwd, _ := os.Getwd()
-	for _, base := range []string{filepath.Dir(exe), e.root, cwd} {
-		if candidate := filepath.Join(base, "music-engine", "runtime", executableName("python")); executableFile(candidate) {
-			return candidate
-		}
-		parts := []string{base, "music-engine", "venv", "bin", "python3"}
-		if runtime.GOOS == "windows" {
-			parts = []string{base, "music-engine", "venv", "Scripts", "python.exe"}
-		}
-		if candidate := filepath.Join(parts...); executableFile(candidate) {
+	for _, candidate := range musicPythonCandidates(exe, e.root, cwd, runtime.GOOS) {
+		if executableFile(candidate) {
 			return candidate
 		}
 	}
 	return ""
+}
+
+// Resolve packaged interpreters independently of the shell working directory.
+// A macOS bundle keeps executable tools under Contents/Resources.
+func musicPythonCandidates(executable, root, cwd, platform string) []string {
+	bases := []string{}
+	if platform == "darwin" {
+		bases = append(bases, filepath.Join(filepath.Dir(executable), "..", "Resources"))
+	}
+	bases = append(bases, filepath.Dir(executable), root, cwd)
+	paths := []string{}
+	for _, base := range bases {
+		engine := filepath.Join(base, "music-engine")
+		if platform == "windows" {
+			paths = append(paths, filepath.Join(engine, "runtime", "python.exe"), filepath.Join(engine, "venv", "Scripts", "python.exe"))
+		} else {
+			paths = append(paths, filepath.Join(engine, "runtime", "bin", "python3"), filepath.Join(engine, "runtime", "python"), filepath.Join(engine, "venv", "bin", "python3"))
+		}
+	}
+	return paths
 }
 
 func (e *Engine) callMusicBridge(ctx context.Context, request musicBridgeRequest) (musicBridgeResponse, error) {
@@ -115,7 +128,7 @@ func (e *Engine) callMusicBridge(ctx context.Context, request musicBridgeRequest
 	if err != nil {
 		return response, err
 	}
-	cmd := exec.CommandContext(ctx, python, "-B", "-X", "utf8", "-c", musicBridgeScript)
+	cmd := exec.CommandContext(ctx, python, "-I", "-B", "-X", "utf8", "-c", musicBridgeScript)
 	cmd.Stdin = bytes.NewReader(body)
 	cmd.Dir = e.root
 	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8", "PYTHONDONTWRITEBYTECODE=1")

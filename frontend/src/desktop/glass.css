@@ -13,7 +13,8 @@ html:has(.native-glass),body:has(.native-glass) { background: transparent; }
 .glass-shell { position: relative; isolation: isolate; padding: 16px; gap: 12px; background: #dceaff; }
 .glass-shell::before { content: ''; position: absolute; z-index: -1; inset: -4%; pointer-events: none; background: url('/glass-backdrop.jpg') center/cover; animation: glass-drift 22s ease-in-out infinite alternate; }
 .glass-shell.native-glass { background: rgba(225,238,255,.12); }
-.glass-shell.native-mac-glass { padding-top: 44px; }
+.glass-shell.native-mac-glass { padding-top: 12px; }
+.native-mac-glass header,.native-mac-glass .brand { --wails-draggable: no-drag; -webkit-user-select: none; user-select: none; }
 .native-glass::before { opacity: .68; }
 .sidebar,.main-content,.detail-pane { background: linear-gradient(135deg,rgba(255,255,255,.40),rgba(255,255,255,.06) 45%,rgba(178,207,255,.12)),rgba(255,255,255,var(--glass-main,.28)); border: 1px solid var(--glass-edge); border-radius: 22px; box-shadow: var(--glass-shadow); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
 .sidebar { background: linear-gradient(145deg,rgba(255,255,255,.38),rgba(255,255,255,.04) 52%,rgba(181,205,255,.16)),rgba(255,255,255,var(--glass-rail,.325)); width: 210px; }
@@ -44,7 +45,10 @@ button:active:not(:disabled) { background-color: rgba(231,241,255,.85); box-shad
 .capture-status,.capture-guide { border: 1px solid var(--glass-edge); border-radius: 14px; background: rgba(255,255,255,.35); }
 .capture-status { background: rgba(204,237,255,.42); }
 .workspace,.panel { background: transparent; }
-.table-scroll { border-radius: 15px 15px 0 0; background: rgba(255,255,255,var(--glass-content,.68)); border: 1px solid var(--glass-edge); border-bottom: 0; }
+.table-scroll { border-radius: 15px; background: rgba(255,255,255,var(--glass-content,.68)); border: 1px solid var(--glass-edge); }
+.table-bottom { border-top: 0; }
+.table-scroll .empty-state { flex: 1 0 auto; min-height: min-content; padding: 24px; }
+.table-scroll .empty-state > * { flex-shrink: 0; }
 th { background: rgba(241,248,255,.94); }
 .search,.resource-sort { border: 1px solid var(--glass-edge); background: rgba(255,255,255,.5); border-radius: 15px; }
 .type-tabs { gap: 3px; }
@@ -93,12 +97,14 @@ footer { margin-top: 10px; padding: 9px 2px; min-height: 52px; }
 @keyframes glass-drift { from { transform: translate3d(-1%,0,0) scale(1.02); } to { transform: translate3d(1%,1%,0) scale(1.06); } }
 @keyframes surface-arrive { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes transfer-shine { to { transform: translateX(100%); } }
-.in-background::before,.in-background *,.in-background *::after { animation-play-state: paused !important; }
+.in-background::before,.in-background .progress-track > .downloading::after { animation-play-state: paused !important; }
+.in-background .workspace,.in-background .downloads-pane,.in-background .settings-pane,.in-background .help-pane,.in-background .modal,.in-background .toast { animation: none; }
 .glass-shell.reduce-transparency { background: #e9f0f9; --glass-rail: 1 !important; --glass-main: 1 !important; --glass-content: 1 !important; }
 .reduce-transparency::before { display: none; }
 .reduce-transparency .sidebar,.reduce-transparency .main-content,.reduce-transparency .detail-pane { backdrop-filter: none; -webkit-backdrop-filter: none; background: #f8fbff; }
 .reduce-motion::before,.reduce-motion *,.reduce-motion *::before,.reduce-motion *::after { animation: none !important; transition: none !important; }
 .reduce-motion button:hover,.reduce-motion button:active { transform: none !important; }
+@media (max-height: 850px) { .table-scroll .empty-visual { display: none; } .table-scroll .empty-state { padding: 18px 24px; } .table-scroll .empty-note { margin-top: 12px; } }
 @media (max-width: 1180px) { .sidebar { width: 190px; } .main-content { padding: 22px 18px 0; } .detail-pane { box-shadow: -8px 0 40px rgba(45,72,119,.14); background: rgba(248,252,255,.92); } .settings-tabs button { padding-inline: 10px; } }
 @media (max-width: 700px) { .glass-shell { padding: 8px; gap: 8px; } .sidebar { width: 64px; border-radius: 18px; } .brand { padding: 17px 10px; } .sidebar nav { padding: 0 6px; } .sidebar nav button { padding: 10px; } .main-content { padding: 18px 12px 0; border-radius: 18px; } .settings-pane { padding: 0 16px 20px; } .settings-tabs button { flex: none; } .glass-preview { padding: 16px; gap: 10px; } .glass-preview small { display: block; margin-left: 0; } .appearance-footer { align-items: flex-start; flex-direction: column; } .type-tabs { gap: 0; } .type-tabs button { padding-inline: 7px; } }
 @media (prefers-reduced-motion: reduce) { .glass-shell::before,.glass-shell *,.glass-shell *::before,.glass-shell *::after { animation: none !important; transition: none !important; } .glass-shell button:hover,.glass-shell button:active { transform: none !important; } }
