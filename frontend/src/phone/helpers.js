@@ -6,7 +6,7 @@ export function duration(v){if(!v)return '';const seconds=Math.round(v);return M
 export function inputLinks(text){return [...new Set((text.match(/https?:\/\/[^\s<>"'，。；、（）【】]+/gi)||[]).map(s=>s.replace(/[，。；、！!"'）)\]}]+$/g,'')))]}
 export function pollDelay(state, failures = 0) {
   if (failures) return Math.min(1500 * 2 ** Math.min(failures, 4), 15000);
-  return state.jobs.some(j => activeStatus(j.status)) || state.batches.some(b => b.status === 'parsing') ? 1500 : 5000;
+  return (state.activity ?? (state.jobs.some(j => activeStatus(j.status)) || state.batches.some(b => b.status === 'parsing'))) ? 1500 : 10000;
 }
 export function matchesSearch(item, text) {
   const words = text.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
@@ -18,4 +18,11 @@ export function remaining(seconds) {
   if (seconds < 60) return '约 ' + Math.ceil(seconds) + ' 秒';
   if (seconds < 3600) return '约 ' + Math.ceil(seconds / 60) + ' 分钟';
   return '约 ' + (seconds / 3600).toFixed(1) + ' 小时';
+}
+
+export function plannedLabel(job, queuePaused = false) {
+  if (job.status !== 'queued') return jobLabel(job.status);
+  const scheduled = Date.parse(job.scheduledAt);
+  if (scheduled > Date.now()) return '预约 ' + new Date(scheduled).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+  return queuePaused ? '等待队列继续' : '等待电脑下载';
 }

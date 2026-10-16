@@ -31,3 +31,21 @@ func TestMacReleaseSelectionRequiresArchitectureDigestAndStableTag(t *testing.T)
 		t.Fatal("offered downgrade", info, err)
 	}
 }
+
+func TestMacReleaseMessagesDistinguishLatestFromMissingPackage(t *testing.T) {
+	for _, tc := range []struct {
+		name, current, tag, status, message string
+	}{
+		{"latest", "1.7.2", "v1.7.2-macos", "latest", "当前已是最新版本（1.7.2）"},
+		{"unpublished local build", "1.8.0", "v1.7.2-macos", "latest", "无需更新"},
+		{"newer without package", "1.7.2", "v1.8.0-macos", "unavailable", "安装包尚未就绪"},
+		{"no mac releases", "1.7.2", "v9.0.0", "unavailable", "尚未找到已发布的 macOS 正式版"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			info, err := selectMacRelease([]githubRelease{{Tag: tc.tag}}, "arm64", tc.current)
+			if err != nil || info.Available || info.Status != tc.status || !strings.Contains(info.Message, tc.message) || !strings.Contains(info.Message, tc.current) {
+				t.Fatalf("misleading update state: %#v %v", info, err)
+			}
+		})
+	}
+}

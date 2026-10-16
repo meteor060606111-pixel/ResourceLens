@@ -307,6 +307,29 @@ func (e *Engine) Close() {
 		e.saveSession()
 	})
 }
+
+// Call while holding Engine.mu; desktop and phone share the same speed sample.
+func jobProgressLocked(j *Job, now time.Time) (int64, float64, float64) {
+	done := j.done.Load()
+	speed := float64(0)
+	if j.Status == "downloading" {
+		if j.speedSampleAt.IsZero() {
+			j.speedSampleAt, j.speedSampleBytes = now, done
+		} else if elapsed := now.Sub(j.speedSampleAt).Seconds(); elapsed >= 1 {
+			j.speed = max(0, float64(done-j.speedSampleBytes)/elapsed)
+			j.speedSampleAt, j.speedSampleBytes = now, done
+		}
+		speed = j.speed
+	} else {
+		j.speed, j.speedSampleBytes, j.speedSampleAt = 0, done, time.Now()
+	}
+	eta := float64(0)
+	if speed > 0 && j.Total > done {
+		eta = float64(j.Total-done) / speed
+	}
+	return done, speed, eta
+}
+
 func (e *Engine) state() map[string]any {
 	mobile := e.mobileStatus()
 	e.mu.Lock()
@@ -318,24 +341,7 @@ func (e *Engine) state() map[string]any {
 	sort.Slice(rs, func(i, j int) bool { return rs[i].CapturedAt.After(rs[j].CapturedAt) })
 	js := make([]map[string]any, 0, len(e.jobs))
 	for _, j := range e.jobs {
-		done := j.done.Load()
-		speed := float64(0)
-		if j.Status == "downloading" {
-			now := time.Now()
-			if j.speedSampleAt.IsZero() {
-				j.speedSampleAt, j.speedSampleBytes = now, done
-			} else if elapsed := now.Sub(j.speedSampleAt).Seconds(); elapsed >= 1 {
-				j.speed = max(0, float64(done-j.speedSampleBytes)/elapsed)
-				j.speedSampleAt, j.speedSampleBytes = now, done
-			}
-			speed = j.speed
-		} else {
-			j.speed, j.speedSampleBytes, j.speedSampleAt = 0, done, time.Now()
-		}
-		eta := float64(0)
-		if speed > 0 && j.Total > done {
-			eta = float64(j.Total-done) / speed
-		}
+		done, speed, eta := jobProgressLocked(j, time.Now())
 		js = append(js, map[string]any{"id": j.ID, "resourceId": j.ResourceID, "name": j.Name, "url": j.URL, "status": j.Status, "total": j.Total, "done": done, "speed": speed, "eta": eta, "file": j.File, "error": j.Error, "createdAt": j.CreatedAt, "percent": j.Percent, "notice": j.Notice, "resumeAvailable": j.ResumeAvailable, "quality": j.Quality, "requestedQuality": j.RequestedQuality, "priority": j.Priority, "scheduledAt": j.ScheduledAt})
 	}
 	sort.Slice(js, func(i, j int) bool { return js[i]["createdAt"].(time.Time).After(js[j]["createdAt"].(time.Time)) })

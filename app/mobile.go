@@ -291,37 +291,6 @@ func (m *MobileGateway) pair(w http.ResponseWriter, r *http.Request, code string
 	http.SetCookie(w, &http.Cookie{Name: mobileCookie, Value: token, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 8 * 3600})
 	mobileJSON(w, map[string]any{"paired": true, "version": appVersion}, nil)
 }
-func (m *MobileGateway) state() map[string]any {
-	s := m.engine.state()
-	resources := []map[string]any{}
-	for _, r := range s["resources"].([]Resource) {
-		resources = append(resources, map[string]any{"id": r.ID, "name": r.Name, "type": r.Type, "size": r.Size, "site": r.Site, "author": r.Author, "width": r.Width, "height": r.Height, "duration": r.Duration, "captureRequired": r.CaptureRequired, "hasPoster": r.Thumbnail != "" || r.Type == "image", "quality": r.Quality})
-	}
-	jobs := []map[string]any{}
-	for _, j := range s["jobs"].([]map[string]any) {
-		copy := map[string]any{}
-		for _, key := range []string{"id", "resourceId", "name", "status", "total", "done", "speed", "eta", "percent", "quality", "requestedQuality", "resumeAvailable", "createdAt"} {
-			copy[key] = j[key]
-		}
-		if j["error"] != "" {
-			copy["error"] = "下载未完成，请重试或在电脑查看详情"
-		}
-		jobs = append(jobs, copy)
-	}
-	batches := []map[string]any{}
-	for _, b := range s["batches"].([]ParseBatch) {
-		items := []map[string]any{}
-		for _, item := range b.Items {
-			entry := map[string]any{"status": item.Status, "resourceId": item.ResourceID}
-			if item.Error != "" {
-				entry["error"] = "链接解析失败，可在电脑上查看详情"
-			}
-			items = append(items, entry)
-		}
-		batches = append(batches, map[string]any{"id": b.ID, "createdAt": b.CreatedAt, "status": b.Status, "items": items})
-	}
-	return map[string]any{"version": appVersion, "resources": resources, "jobs": jobs, "batches": batches, "capture": s["capture"]}
-}
 func (m *MobileGateway) serve(w http.ResponseWriter, r *http.Request) {
 	if !m.validRequest(r) {
 		http.Error(w, "Connection rejected", 403)
@@ -356,6 +325,8 @@ func (m *MobileGateway) serve(w http.ResponseWriter, r *http.Request) {
 		ID      string   `json:"id"`
 		Quality string   `json:"quality"`
 		Force   bool     `json:"force"`
+		Paused  *bool    `json:"paused"`
+		Details bool     `json:"details"`
 	}
 	if r.Method == "POST" {
 		typeName, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
@@ -393,7 +364,7 @@ func (m *MobileGateway) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "GET" && r.URL.Path == "/api/mobile/state" {
-		mobileJSON(w, m.state(), nil)
+		mobileJSON(w, m.state(r.URL.Query()), nil)
 		return
 	}
 	if r.Method != "POST" {
@@ -414,6 +385,19 @@ func (m *MobileGateway) serve(w http.ResponseWriter, r *http.Request) {
 		}
 	case "/api/mobile/download":
 		result, err = m.engine.startDownloadOptions(in.ID, in.Quality, in.Force)
+		if err == nil && in.Details {
+			m.engine.mu.RLock()
+			if job := m.engine.jobs[result.(string)]; job != nil {
+				result = map[string]any{"id": job.ID, "status": job.Status}
+			}
+			m.engine.mu.RUnlock()
+		}
+	case "/api/mobile/queue-control":
+		if in.Paused == nil {
+			err = errors.New("请选择暂停或继续队列")
+		} else {
+			err = m.engine.setQueuePaused(*in.Paused)
+		}
 	case "/api/mobile/pause":
 		err = m.engine.pauseJob(in.ID)
 	case "/api/mobile/resume":

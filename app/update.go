@@ -288,7 +288,7 @@ func (e *Engine) checkUpdate() (any, error) {
 	info := UpdateInfo{Version: feed.Version, Status: "available", Source: "online", URL: feed.URL, SHA256: strings.ToLower(feed.SHA256), Available: compareVersions(feed.Version, appVersion) > 0, Message: "发现新版，可下载并核验安装包"}
 	if !info.Available {
 		info.Status = "latest"
-		info.Message = "当前已是该更新源提供的最新版本"
+		info.Message = fmt.Sprintf("当前版本 %s，已是该更新源提供的最新版本", appVersion)
 	}
 	if err = e.setUpdateInfo(info); err != nil {
 		return nil, err

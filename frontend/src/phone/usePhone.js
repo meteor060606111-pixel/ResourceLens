@@ -6,9 +6,11 @@ export function usePhone() {
   const paired = ref(false), loading = ref(true), offline = ref(''), busy = ref(false);
   const notice = ref(''), noticeError = ref(false), lastUpdated = ref(null);
   const state = ref({resources: [], jobs: [], batches: [], version: ''});
+  const query = {resourcePage: 1, resourceQuery: '', resourceType: 'all', jobPage: 1, jobQuery: '', jobFilter: 'all'};
   let timer, noticeTimer, refreshPromise, reconnectPromise, disposed = false, generation = 0, failures = 0;
   function clearSession() {
     generation++;
+    Object.assign(query,{resourcePage:1,resourceQuery:'',resourceType:'all',jobPage:1,jobQuery:'',jobFilter:'all'});
     paired.value = false;
     offline.value = '';
     lastUpdated.value = null;
@@ -38,7 +40,7 @@ export function usePhone() {
     const epoch = generation;
     const pending = (async () => {
       try {
-        const snapshot = await api('state');
+        const snapshot = await api('state?' + new URLSearchParams(query));
         if (disposed || epoch !== generation || !paired.value) return false;
         state.value = snapshot;
         lastUpdated.value = Date.now();
@@ -103,9 +105,21 @@ export function usePhone() {
   async function disconnect() {
     await run(async () => {await api('disconnect', {}); clearSession(); toast('已断开连接');});
   }
+  async function setQuery(section, values) {
+    const prefix = section === 'resources' ? 'resource' : 'job';
+    query[prefix + 'Page'] = values.page || 1;
+    if (values.query !== undefined) query[prefix + 'Query'] = values.query;
+    if (values.type !== undefined) query.resourceType = values.type;
+    if (values.filter !== undefined) query.jobFilter = values.filter;
+    generation++;
+    api.abortReads();
+    refreshPromise = null;
+    loading.value = true;
+    try {await refresh();} finally {loading.value = false; schedule();}
+  }
   function visible() {
     if (document.visibilityState === 'visible') void reconnect();
-    else clearTimeout(timer);
+    else {clearTimeout(timer); api.abortReads();}
   }
   onMounted(() => {
     void reconnect();
@@ -121,5 +135,5 @@ export function usePhone() {
     document.removeEventListener('visibilitychange', visible);
     window.removeEventListener('online', visible);
   });
-  return {paired, loading, offline, busy, notice, noticeError, lastUpdated, state, api, toast, refresh, reconnect, run, pair, disconnect};
+  return {paired, loading, offline, busy, notice, noticeError, lastUpdated, state, api, toast, refresh, reconnect, run, pair, disconnect, setQuery};
 }

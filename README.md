@@ -1,10 +1,12 @@
-# 拾流 ResourceLens 1.7.2
+# 拾流 ResourceLens 1.8.0
 
-1.7.2 合并重复运行时并裁剪开发文件与符号，Apple 芯片安装包约 225.7 MiB，比精简前减少约 34%；保留 57 个平台注册和 24 个歌单实现。新增下载队列优先级、预约开始、暂停后续队列和每任务限速；HTTP 多段下载共享限额。Mac 默认从本项目 GitHub 检查新版，点击安装后在 Applications 原位替换，验证失败恢复原应用，成功后清理旧程序和暂存包并重新打开。现有下载与配置保留。
+延续 1.7.2 的重复运行时合并及开发文件、符号裁剪，前版 Apple 芯片安装包由 343.5 MiB 降至 225.7 MiB，减少约 34%；保留 57 个平台注册和 24 个歌单实现。新增下载队列优先级、预约开始、暂停后续队列和每任务限速；HTTP 多段下载共享限额。Mac 默认从本项目 GitHub 检查新版，点击安装后在 Applications 原位替换，验证失败恢复原应用，成功后清理旧程序和暂存包并重新打开。现有下载与配置保留。
 
-本轮已取消浏览器扩展；手机先做架构调研。Gopeed 原生 iPhone / Android 和 AB Android 在手机本地下载，拾流现有 iPhone 网页端连接 Mac 下载，再从 Mac 预览或取回文件。源码调用链和固定版本见 [开源研究与重构记录](docs/OPEN_SOURCE_RESEARCH.md)。
+1.8.0 开始完善 iPhone 轻量连接版：可添加到主屏幕，手机发链接、Mac 下载、完成后取回文件。全局搜索与筛选在 Mac 执行，每页只传 30 个资源和 30 个任务；后台停止刷新，空闲时降低刷新频率，音视频按需加载。手机代码与样式（含 Vue 共用模块）限制在 160 KiB 内，含图标的所有页面资源限制在 256 KiB 内，构建时自动检查；没有新增下载或转码运行时。Mac 更新提示现在明确区分已是最新版、安装包尚未就绪和网络检查失败。
 
-1.6.3 集成「音乐搜索 / 导入歌单」：按歌名或歌手搜索，或粘贴公开歌单链接，试听后单首或批量下载，保存音源附带的 `.lrc` 歌词。下载完成前验证音轨和解码，短音源提示可能为试听片段；不兼容格式使用独立播放缓存。Windows 1.6.3 和 macOS 1.7.2 安装包均内置可移动 Python/musicdl 2.14.1，安装后无需另装 Python。平台选择框与搜索栏统一玻璃样式，支持小窗口和键盘操作。音乐引擎按上游 PolyForm Noncommercial 1.0.0 单独授权，适用于个人非商业用途，详见 [音乐引擎说明](music-engine/README.md)。
+本轮已取消浏览器扩展。Gopeed 原生 iPhone / Android 和 AB Android 在手机本地下载，拾流现有 iPhone 网页端连接 Mac 下载，再从 Mac 预览或取回文件。源码调用链和固定版本见 [开源研究与重构记录](docs/OPEN_SOURCE_RESEARCH.md)。
+
+1.6.3 集成「音乐搜索 / 导入歌单」：按歌名或歌手搜索，或粘贴公开歌单链接，试听后单首或批量下载，保存音源附带的 `.lrc` 歌词。下载完成前验证音轨和解码，短音源提示可能为试听片段；不兼容格式使用独立播放缓存。Windows 1.6.3 和 macOS 1.8.0 安装包均内置可移动 Python/musicdl 2.14.1，安装后无需另装 Python。平台选择框与搜索栏统一玻璃样式，支持小窗口和键盘操作。音乐引擎按上游 PolyForm Noncommercial 1.0.0 单独授权，适用于个人非商业用途，详见 [音乐引擎说明](music-engine/README.md)。
 
 **Windows 安装版：[下载 ResourceLens-1.6.3-Setup.exe](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.6.3-windows/ResourceLens-1.6.3-Setup.exe)**。支持 Windows 10/11 x64，双击安装后创建桌面快捷方式，内置下载、视频处理和音乐引擎。发布说明及校验文件见 [Windows Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.6.3-windows)。
 
@@ -12,9 +14,9 @@ Windows 已适配 1.6.0 玻璃桌面工作台和 iPhone 伴侣页面。Windows 1
 
 ## macOS 版本
 
-**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.7.2-macos/ResourceLens-1.7.2-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.7.2-macos/ResourceLens-1.7.2-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.7.2-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
+**Mac 安装包：[Apple 芯片 arm64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.8.0-macos/ResourceLens-1.8.0-macos-arm64.dmg) · [Intel amd64](https://github.com/meteor060606111-pixel/ResourceLens/releases/download/v1.8.0-macos/ResourceLens-1.8.0-macos-amd64.dmg)**。发布状态及校验文件见 [macOS Release](https://github.com/meteor060606111-pixel/ResourceLens/releases/tag/v1.8.0-macos)，自动构建状态见 [Actions](https://github.com/meteor060606111-pixel/ResourceLens/actions/workflows/macos.yml)。
 
-1.7.2 完整音乐版需要 macOS 14 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎和音乐引擎均内置，可直接使用音乐搜索、公开歌单导入、试听、歌词保存和兼容音频预览。顶部透明标题栏使用原生 macOS 拖动，按钮和输入框仍正常操作。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
+1.8.0 完整音乐版需要 macOS 14 或更高版本。打开 DMG，将 ResourceLens.app 拖入 Applications；下载、画质选择、暂停续传和媒体预览沿用原工作台，媒体引擎和音乐引擎均内置，可直接使用音乐搜索、公开歌单导入、试听、歌词保存和兼容音频预览。顶部透明标题栏使用原生 macOS 拖动，按钮和输入框仍正常操作。macOS 系统代理、钥匙串证书、Finder 定位、单实例和子进程管理已分别适配。
 
 默认下载目录为 `~/Downloads/ResourceLens`，配置、日志、证书与任务保存在 `~/Library/Application Support/ResourceLens/data`。首次捕获需要 macOS 网络设置及钥匙串授权；停止捕获或正常退出恢复原代理。更新使用 DMG 拖拽替换应用，保留本机数据。
 
@@ -34,7 +36,7 @@ Windows 已适配 1.6.0 玻璃桌面工作台和 iPhone 伴侣页面。Windows 1
 - 动态玻璃：缓慢流动的背景、跟随鼠标的按钮高光（按钮本体保持稳定）、面板展开与下载进度光带。设置 → 界面外观可调整透明程度、减少透明或动态效果，偏好自动保存在本机，并尊重系统辅助功能设置。
 - 快捷键：`⌘/Ctrl + N` 添加链接，`⌘/Ctrl + F` 搜索，`⌘/Ctrl + 1–5` 切换页面，`Esc` 关闭详情或对话框。设置类别支持方向键切换。
 
-材质参考 [Apple Liquid Glass 设计规范](https://developer.apple.com/design/human-interface-guidelines/materials)，采用 Wails 原生 macOS 背景模糊与 Web 材质实现。界面结构参考了 [Gopeed](https://github.com/GopeedLab/gopeed) 的导航、任务进度与设计参数，以及 [AB Download Manager](https://github.com/amir1376/ab-download-manager) 的列表、排序和批量选择交互。保持 Vue / Wails 实现，未引入参考项目的运行依赖。手机功能未在本轮扩展。
+材质参考 [Apple Liquid Glass 设计规范](https://developer.apple.com/design/human-interface-guidelines/materials)，采用 Wails 原生 macOS 背景模糊与 Web 材质实现。界面结构参考了 [Gopeed](https://github.com/GopeedLab/gopeed) 的导航、任务进度与设计参数，以及 [AB Download Manager](https://github.com/amir1376/ab-download-manager) 的列表、排序和批量选择交互。保持 Vue / Wails 实现，未引入参考项目的运行依赖。iPhone 连接版沿用独立入口，桌面不会加载手机业务页面。
 
 本地检查覆盖真实批量下载、暂停续传、完成文件预览、排序搜索、设置草稿及保存；下载文件逐项核对 SHA-256。前端辅助逻辑与原手机传输测试共 10 项，并保留 Go 后端测试、`go vet` 和 macOS / Windows 构建检查。
 

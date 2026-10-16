@@ -1,11 +1,11 @@
 {
   "name": "resourcelens-ui",
-  "version": "1.7.2",
+  "version": "1.8.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "node --test src/desktop/*.test.js src/phone/*.test.js",
-    "build": "vite build",
+    "build": "vite build && node scripts/check-phone-budget.mjs",
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {

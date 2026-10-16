@@ -1,6 +1,6 @@
 # macOS 构建与安装
 
-1.6.4 完整音乐版支持 macOS 14 及以上，分别生成 Apple 芯片 (`arm64`) 和 Intel (`amd64`) 安装包。桌面使用 Wails 的原生 WKWebView，媒体与音乐引擎已内置，使用时不需要 Go、Node.js、Python 或 Homebrew。
+1.8.0 完整音乐版支持 macOS 14 及以上，分别生成 Apple 芯片 (`arm64`) 和 Intel (`amd64`) 安装包。桌面使用 Wails 的原生 WKWebView，媒体与音乐引擎已内置，使用时不需要 Go、Node.js、Python 或 Homebrew。
 
 ## 从源码构建
 
@@ -13,7 +13,7 @@ xcode-select --install
 RESOURCELENS_ARCH=amd64 ./build-macos.sh
 ```
 
-脚本核对固定 SHA-256 后下载媒体引擎、独立 CPython 和全部音乐依赖，构建前端，运行 Go 测试和 vet，再创建 `.app`、DMG 和 `.sha256`。默认产物在 `release/macos-arm64` 或 `release/macos-amd64`。`installer/macos/toolchain.json` 管理媒体工具来源与校验值；`music-toolchain.json` 固定 CPython 3.12.15、musicdl 2.14.1 及所有传递依赖。音乐环境在构建临时目录安装，通过 `pip check` 和异地运行探测后写入包中；不读取个人 venv。所有 Mach-O 动态库、扩展与子程序逐项核验架构并签名，保留原许可证。
+脚本核对固定 SHA-256 后下载媒体引擎、独立 CPython 和全部音乐依赖，构建前端，运行 Go 测试和 vet，再创建 `.app`、DMG 和 `.sha256`。默认产物在 `release/macos-arm64.noindex` 或 `release/macos-amd64.noindex`。`installer/macos/toolchain.json` 管理媒体工具来源与校验值；`music-toolchain.json` 固定 CPython 3.12.15、musicdl 2.14.1 及所有传递依赖。音乐环境在构建临时目录安装，通过 `pip check` 和异地运行探测后写入包中；不读取个人 venv。所有 Mach-O 动态库、扩展与子程序逐项核验架构并签名，保留原许可证。
 
 可设置 `GO_EXECUTABLE`、`PYTHON_EXECUTABLE`、`RESOURCELENS_TOOLS_DIR`、`RESOURCELENS_MUSIC_DIR` 和 `RESOURCELENS_OUTPUT_DIR`。离线且已准备正确芯片的完整工具时使用 `RESOURCELENS_FETCH_TOOLS=0`。`RESOURCELENS_SKIP_TESTS=1` 只适用于已经完成测试的打包流程。
 
@@ -32,7 +32,7 @@ GitHub Actions 使用原生 Apple 芯片和 Intel runner 分别测试并构建�
 
 HTTPS 证书安装到用户登录钥匙串，并单独设置 SSL 信任。macOS 会请求系统授权；可在设置中移除证书。没有为了测试而修改开发机器的系统代理或信任设置。
 
-更新支持本地 DMG 和可信 HTTPS 更新清单。只读挂载核对应用标识、版本及 Mach-O 芯片类型，再核对 SHA-256。开始安装会打开 DMG 并退出拾流，由用户拖拽替换应用。Mac 不使用 Windows 的安装助手或 EXE 回滚，可从 Releases 获取上一版 DMG。
+更新默认读取本项目 GitHub Releases，也支持本地 DMG 和可信 HTTPS 更新清单。校验 SHA-256、应用标识、版本、Mach-O 芯片类型与签名完整性后，在 Applications 原位交换应用目录；校验失败恢复原应用，成功后自动重新打开，并清理旧应用与暂存安装包。已有下载与配置保留。安装前需在应用中确认，进行中的下载需先暂停或完成。
 
 ## 签名与公证
 
@@ -58,7 +58,7 @@ MACOS_NOTARY_PROFILE='your-keychain-profile' ./build-macos.sh
 音乐 Python 位于 `ResourceLens.app/Contents/Resources/music-engine/runtime/bin/python3`，不依赖当前工作目录；使用隔离解释器模式启动。已有数据目录 venv 和 `RESOURCELENS_MUSIC_PYTHON` 自定义路径仍可使用。复制或移动 `.app` 后无需修复绝对路径。打包依赖最低系统为 macOS 14，旧版 macOS 13.5 的视频工作台可从旧版本 Release 获取。
 
 
-## 1.7.2 更新和副本清理
+## 1.8.0 更新和副本清理
 
 “设置 → 关于与更新”默认从 GitHub 获取本机芯片对应的稳定 macOS 安装包，自动检查可关闭，安装前会确认。只有安装在 `/Applications/ResourceLens.app` 或 `~/Applications/ResourceLens.app` 的应用支持原位升级；其他位置请先移入 Applications。
 

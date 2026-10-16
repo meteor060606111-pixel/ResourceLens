@@ -33,13 +33,20 @@ func selectMacRelease(releases []githubRelease, arch, current string) (UpdateInf
 	if arch != "arm64" && arch != "amd64" {
 		return UpdateInfo{}, errors.New("没有适用于当前 Mac 芯片的更新")
 	}
-	info := UpdateInfo{CurrentVersion: current, Version: current, Status: "latest", Source: "github", Message: "当前没有适用于这台 Mac 的可用更新"}
+	info := UpdateInfo{CurrentVersion: current, Version: current, Status: "latest", Source: "github", Message: fmt.Sprintf("当前已是最新版本（%s）", current)}
+	latestPublished := ""
 	for _, release := range releases {
 		if release.Draft || release.Prerelease || !strings.HasSuffix(release.Tag, "-macos") {
 			continue
 		}
 		version, err := normalizedVersion(strings.TrimSuffix(release.Tag, "-macos"))
-		if err != nil || compareVersions(version, info.Version) <= 0 {
+		if err != nil {
+			continue
+		}
+		if latestPublished == "" || compareVersions(version, latestPublished) > 0 {
+			latestPublished = version
+		}
+		if compareVersions(version, info.Version) <= 0 {
 			continue
 		}
 		name := fmt.Sprintf("ResourceLens-%s-macos-%s.dmg", version, arch)
@@ -55,6 +62,18 @@ func selectMacRelease(releases []githubRelease, arch, current string) (UpdateInf
 				continue
 			}
 			info = UpdateInfo{CurrentVersion: current, Version: version, Status: "available", Source: "github", URL: asset.URL, FileName: name, SHA256: strings.ToLower(digest), Size: asset.Size, Available: true, Message: "GitHub 有适用于此 Mac 的新版；下载后会与 GitHub SHA-256 核对，安装时替换现有应用"}
+		}
+	}
+	if !info.Available {
+		switch {
+		case latestPublished == "":
+			info.Status = "unavailable"
+			info.Message = fmt.Sprintf("尚未找到已发布的 macOS 正式版，当前版本为 %s，请稍后再检查", current)
+		case compareVersions(latestPublished, current) > 0:
+			info.Status, info.Version = "unavailable", latestPublished
+			info.Message = fmt.Sprintf("已发布 %s，但适用于此 Mac 的可校验安装包尚未就绪；当前版本 %s，请稍后再检查", latestPublished, current)
+		case compareVersions(latestPublished, current) < 0:
+			info.Message = fmt.Sprintf("当前版本 %s；GitHub 最新正式版为 %s，无需更新", current, latestPublished)
 		}
 	}
 	return info, nil
