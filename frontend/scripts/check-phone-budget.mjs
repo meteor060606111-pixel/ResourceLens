@@ -1,11 +1,12 @@
 import {readFileSync,statSync} from 'node:fs';
-import {resolve,dirname,extname,relative} from 'node:path';
+import {resolve,dirname,extname,relative,sep} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {gzipSync} from 'node:zlib';
 
-const root=resolve('dist'),seen=new Set();
+const root=resolve(fileURLToPath(new URL('../dist/',import.meta.url))),seen=new Set();
 function visit(file){
   if(seen.has(file))return;
-  if(!file.startsWith(root+'/'))throw Error('Phone asset escapes dist');
+  if(!file.startsWith(root+sep))throw Error('Phone asset escapes dist');
   seen.add(file);
   if(!['.html','.js','.webmanifest'].includes(extname(file)))return;
   const source=readFileSync(file,'utf8');

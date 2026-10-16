@@ -86,11 +86,17 @@ jobs:
         shell: pwsh
         run: |
           npm ci --prefix frontend --ignore-scripts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run build --prefix frontend
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm test --prefix frontend
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go test -tags 'desktop,production' ./app ./frontend
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go vet -tags 'desktop,production' ./app ./frontend
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go build -tags 'desktop,production' -o release/ResourceLens.exe ./app
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   release:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
